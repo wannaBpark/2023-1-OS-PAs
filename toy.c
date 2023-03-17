@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 
 int main(int argc, const char *argv[])
 {
@@ -27,6 +28,9 @@ int main(int argc, const char *argv[])
 		fprintf(stderr, "argv[%d] = %s\n", i, argv[i]);
 	}
 
+	if (argc > 2 && strcmp(argv[1], "zzz") == 0) {
+		sleep(atoi(argv[2]));
+	}
 	fprintf(stderr, "done!\n");
 
 	return EXIT_SUCCESS;
