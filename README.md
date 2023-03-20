@@ -143,7 +143,7 @@ Let's build my amazing shell with those system calls.
   ```
 
 - Hint
-  - If `tokens[]` is a list of words, you might implement the feature easily by replacing a word with multiple words.
+  - If `tokens[]` were a list of words, you might be able to implement the feature easily by replacing a word with multiple words.
   - Take care of the string in `tokens[]` which are allocated and deallocated in the functions in `parser.c`. It is advised to have a look at them before fiddling with `tokens[]`.
 
 
@@ -159,6 +159,8 @@ Let's build my amazing shell with those system calls.
 
 - Note that the shell should be *sane* after processing the pipe.
 
+- Aliases should be applied to the both commands before and after the pipe symbol.
+
 - Hints
   - `pipe(2)` and `dup2(2)`.
   - Implement incrementally. First check whether the pipe symbol exists in the tokens. If not, just do execute the command. If exists, split the tokens into two pars and feed them to **two** different processes which are connected through a pipe.
@@ -171,7 +173,7 @@ Let's build my amazing shell with those system calls.
 - You may not use some or all of the hinted system calls.
 - DO NOT USE `system()` system call. You will get 0 pts if you use it.
 - DO NOT implement external programs' features by yourself (e.g., printing out a message to handle `echo` command, listing the current directory to handle `ls` command, etc). You will not get any point in this case.
-- It is advised to test your code on your computer first and to implement incrementally. Some sample inputs are included under `testcase` directory. Try to input each line or just run `./posh < [input file]`.
+- It is advised to test your code on your computer first and to implement incrementally. Some sample inputs are included under `testcase` directory. Try to input each line or just run `./mash < [input file]`.
 - FYI, the instructor's implementation took ~250 lines of C code. Believe me, the implementation is not difficult if you fully understand the concepts of processes.
 
 
@@ -183,7 +185,7 @@ Let's build my amazing shell with those system calls.
 - Document: ***One PDF document*** (30 pts). It should include **ALL** the followings;
   - Outline how programs are launched and arguments are passed
   - How you implemented the alias feature
-  - Your **STRATEGY** to implement the pipe
+  - Your strategy to implement the pipe, including how many forks did you used and for what?
   - AND lessons learned
 
   - NO MORE THAN ***FOUR*** PAGES
