@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 #include <string.h>
-
+#include <unistd.h>
 /***********************************************************************
  * run_command()
  *
@@ -30,9 +30,32 @@
  */
 int run_command(int nr_tokens, char *tokens[])
 {
-	if (strcmp(tokens[0], "exit") == 0) return 0;
+	pid_t pid;
+	enum ProcessState {
+	    _FORK_ERROR = -1,
+	    CHILD_PROCESS = 0,
+	    PARENT_PROCESS = 1
+	};
+	if (nr_tokens == 0) {
+	    fprintf(stderr, "Unable to execute %s\n", tokens[0]);
+	    goto _ERROR;
+	} else if (strcmp(tokens[0], "exit") == 0) {
+		goto _ERROR;
+	}
+_ERROR:
+	return 0;
 
-	fprintf(stderr, "Unable to execute %s\n", tokens[0]);
+_FORK:
+	pid = fork();
+
+	if (pid < _FORK_ERROR) {
+	    goto _FORK;		
+	} else if (pid >= PARENT_PROCESS) {
+	    
+	} else if (pid == CHILD_PROCESS) {
+	    execvp(tokens[0], tokens);
+	}
+
 	return 1;
 }
 
@@ -50,7 +73,8 @@ int run_command(int nr_tokens, char *tokens[])
  */
 int initialize(int argc, char * const argv[])
 {
-	return 0;
+		int a = 0;
+		return a;
 }
 
 
