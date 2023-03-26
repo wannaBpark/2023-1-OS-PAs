@@ -31,10 +31,18 @@
  *   Return 0 when user inputs "exit"
  *   Return <0 on error
  */
+
+static char** pp_keys = NULL;
+static char** pp_vals = NULL;
+static size_t idx = 0;
+
 int run_command(int nr_tokens, char *tokens[])
 {
 	pid_t pid;
-	int status, cd;
+	int status, cd, pos, i;
+	//static char** pp_keys = NULL;
+	//static char** pp_vals = NULL;
+	//size_t idx = 0, i;
 	//char* env_PATH;
 	enum ProcessState {
 	    _FORK_ERROR = -1,
@@ -54,6 +62,72 @@ int run_command(int nr_tokens, char *tokens[])
 		printf("Somehow, cd failed %s\n", tokens[1]);
 	    }
 	    goto _SUCCESS;
+	} else if (!strcmp("alias", tokens[0])) { // If it's alias instruction
+	    size_t totLength = 0;
+	    char* p_replace = NULL;
+	    pos = -1;
+	    i = 0;
+	    
+	    if (nr_tokens == 1) { // Just Print out existing keys and vals
+	        while ((size_t)i < idx) {
+		    printf("%s: %s\n", *(pp_keys + i), *(pp_vals + i));
+		    i++;
+		}
+		//printf("PRINT ALL ALIAS COMPLETELY!\n");
+		goto _SUCCESS;
+	    }
+	    // IF allocating a new alias...
+
+	    while ((size_t)i < idx) { //find if KEY DOES EXIST
+		char* p_curKey = *(pp_keys + i);
+		if (!strcmp(tokens[1], p_curKey)) {
+		    pos = i; 
+		    break;
+		}
+		++i;
+	    }
+	    //printf("pos already exists! : %d\n", pos);
+	    if (pos == -1) { // DOES NOT EXIST, ADD_TAIL
+		size_t length = strlen(tokens[1]);
+		char* newKey = NULL;
+	        char** tt = malloc(sizeof(char*) * (idx + 1));
+		memcpy(tt, pp_keys, sizeof(char*) * idx);
+		free(pp_keys);
+		pp_keys = tt;
+
+		tt = malloc(sizeof(char*) * (idx + 1));
+		memcpy(tt, pp_vals, sizeof(char*) * idx);
+		free(pp_vals);
+		pp_vals = tt;
+
+		//printf("CUR ALIAS IDX : %ld\n", idx + 1);
+		++idx;
+
+		newKey = malloc(sizeof(char) * (length + 1));
+		strcpy(newKey, tokens[1]);
+		*(pp_keys + idx - 1) = newKey;
+		
+		pos = idx - 1;
+	    } else {
+	        //OVERWRITE Existing value
+		char* p_existVal = *(pp_vals + pos);
+		free(p_existVal);
+	    }
+	    
+	    for (i = 2; i < nr_tokens; ++i) {
+		totLength += strlen(tokens[i]); 
+	    }
+	    p_replace = malloc(sizeof(char) * (totLength + nr_tokens - 3 + 1));
+	    p_replace[0] = '\0';
+	    for (i = 2; i < nr_tokens; ++i) {
+		strcat(p_replace, tokens[i]);
+		if (i != nr_tokens - 1) {
+		    strcat(p_replace, " ");
+		}
+	    }
+	    *(pp_vals + pos) = p_replace;
+	    //printf("Adding new keys and vals Finished!\n");
+            goto _SUCCESS;
 	}
 _FORK:
 	pid = fork();
@@ -65,7 +139,56 @@ _FORK:
 	    //printf("Child status: %d\n", status);
 	} else if (pid == CHILD_PROCESS) {
 	    // CHeck if it's cd command
-	    if (-1 == execvp(tokens[0], tokens)){ //instructions that are NOT CD
+	    size_t length, j;
+	    pos = -1;
+
+	    for (i = 0; i < nr_tokens; ++i) { 
+	    	for (j = 0; j < idx; ++j) {
+		    char* p_k = *(pp_keys + j);
+		    if (!strcmp(tokens[i], p_k)) {
+			char* p_v = *(pp_vals + j);
+			length = strlen(p_v);
+			pos = i;
+		        
+			free(tokens[i]);
+			tokens[i] = malloc(sizeof(char) * (length + 1));
+			strcpy(tokens[i], p_v);
+			goto _FOUNDKEY;
+		    }
+	    	}
+	    }
+_FOUNDKEY:
+	    if (pos == 0) { //Things to do for 'll' 'ls -al'
+		char* p_a = NULL;
+		char* p_b = NULL;
+		char* tmp = strtok(tokens[0], " ");
+		length = strlen(tmp);
+		p_a = malloc(sizeof(char) * (length + 1));
+		//printf("front : %s\n", tmp);
+
+		strcpy(p_a, tmp);
+		tmp[length] = ' ';
+
+		tmp += (length + 1);
+		//tmp = strpbrk(tokens[0], " ");
+		//printf("backward : %s\n", tmp);
+		length = strlen(tmp);
+		p_b = malloc(sizeof(char) * (length + 1));
+		strcpy(p_b, tmp);
+
+		free(tokens[0]);
+		tokens[0] = p_a;
+		for (i = nr_tokens; i >= 2; --i) {
+	            tokens[i] = tokens[i - 1];
+		}
+		tokens[1] = p_b;
+
+		/*for (i = 0; i <= nr_tokens; ++i) {
+	  	    printf("token (%d) : %s\n", i, tokens[i]);
+		}*/
+	    }
+	    
+	    if (-1 == execvp(tokens[0], tokens)) { //instructions that are NOT CD
 	        fprintf(stderr, "Unable to execute %s\n", tokens[0]);
 		exit(EXIT_FAILURE);
 	    }
@@ -104,4 +227,16 @@ int initialize(int argc, char * const argv[])
  */
 void finalize(int argc, char * const argv[])
 {
+    size_t i;
+    char* p_k = NULL;
+    char* p_v = NULL;
+    for (i = 0; i < idx; ++i) {
+        p_k = *(pp_vals + i);
+	p_v = *(pp_keys + i);
+
+	free(p_k);
+	free(p_v);
+    }
+    free(pp_vals);
+    free(pp_keys);
 }

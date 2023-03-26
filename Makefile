@@ -27,9 +27,9 @@ test-run: $(TARGET) toy testcases/test-run
 test-cd: $(TARGET) testcases/test-cd
 	./$< -q < testcases/test-cd
 
-.PHONY: test-history
-test-history: $(TARGET) testcases/test-history
-	./$< -q < testcases/test-history
+.PHONY: test-aliases
+test-history: $(TARGET) testcases/test-aliases
+	./$< -q < testcases/test-aliases
 
 .PHONY: test-pipe
 test-pipe: $(TARGET) testcases/test-pipe
