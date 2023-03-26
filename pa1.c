@@ -39,7 +39,10 @@ static size_t idx = 0;
 int run_command(int nr_tokens, char *tokens[])
 {
 	pid_t pid;
-	int status, cd, pos, i;
+	int status, cd, pos, i, flag = 0;
+	int pfd[2];
+	char** pp_left = NULL;
+	char** pp_right = NULL;
 	//static char** pp_keys = NULL;
 	//static char** pp_vals = NULL;
 	//size_t idx = 0, i;
@@ -49,7 +52,17 @@ int run_command(int nr_tokens, char *tokens[])
 	    CHILD_PROCESS = 0,
 	    PARENT_PROCESS = 1
 	};
-	setenv("HOME", "/home/osos/os-pa1", 1);
+	for (i = 0; i < nr_tokens; ++i) {
+	    printf("token (%d) : %s\n", i, tokens[i]);
+	    if (!strcmp(tokens[i], "|")) {
+	        tokens[i] = NULL;
+		pp_left = tokens;
+		pp_right = (tokens + i + 1);
+		++flag;
+		goto _FORK;
+	    }
+	}
+	//setenv("HOME", "/home/osos/os-pa1", 1);
 	if (nr_tokens == 0) {
 	    //fprintf(stderr, "Unable to execute %s\n", tokens[0]);
 	    goto _ERROR;
@@ -59,7 +72,7 @@ int run_command(int nr_tokens, char *tokens[])
 	if (!strcmp("cd", tokens[0])){
 	    cd = (nr_tokens == 1 || !strcmp("~", tokens[1])) ? chdir(getenv("HOME")) : chdir(tokens[1]);
 	    if (cd != 0) { // If CD fails
-		printf("Somehow, cd failed %s\n", tokens[1]);
+		//printf("Somehow, cd failed %s\n", tokens[1]);
 	    }
 	    goto _SUCCESS;
 	} else if (!strcmp("alias", tokens[0])) { // If it's alias instruction
@@ -130,6 +143,7 @@ int run_command(int nr_tokens, char *tokens[])
             goto _SUCCESS;
 	}
 _FORK:
+	// *************START FROM HERE!if (flag == 1) pipe(pfd);
 	pid = fork();
 
 	if (pid < _FORK_ERROR) {
@@ -141,6 +155,8 @@ _FORK:
 	    // CHeck if it's cd command
 	    size_t length, j;
 	    pos = -1;
+
+
 
 	    for (i = 0; i < nr_tokens; ++i) { 
 	    	for (j = 0; j < idx; ++j) {
