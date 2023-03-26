@@ -34,20 +34,27 @@
 int run_command(int nr_tokens, char *tokens[])
 {
 	pid_t pid;
-	int status;
+	int status, cd;
+	//char* env_PATH;
 	enum ProcessState {
 	    _FORK_ERROR = -1,
 	    CHILD_PROCESS = 0,
 	    PARENT_PROCESS = 1
 	};
-	//printf("number of tokens : %d\n", nr_tokens);
+	setenv("HOME", "/home/osos/os-pa1", 1);
 	if (nr_tokens == 0) {
 	    //fprintf(stderr, "Unable to execute %s\n", tokens[0]);
 	    goto _ERROR;
 	} else if (strcmp(tokens[0], "exit") == 0) {
 	    goto _ERROR;
 	}
-
+	if (!strcmp("cd", tokens[0])){
+	    cd = (nr_tokens == 1 || !strcmp("~", tokens[1])) ? chdir(getenv("HOME")) : chdir(tokens[1]);
+	    if (cd != 0) { // If CD fails
+		printf("Somehow, cd failed %s\n", tokens[1]);
+	    }
+	    goto _SUCCESS;
+	}
 _FORK:
 	pid = fork();
 
@@ -57,11 +64,13 @@ _FORK:
 	    waitpid(pid, &status, 0);
 	    //printf("Child status: %d\n", status);
 	} else if (pid == CHILD_PROCESS) {
-	    if (-1 == execvp(tokens[0], tokens)){
+	    // CHeck if it's cd command
+	    if (-1 == execvp(tokens[0], tokens)){ //instructions that are NOT CD
 	        fprintf(stderr, "Unable to execute %s\n", tokens[0]);
 		exit(EXIT_FAILURE);
 	    }
 	}
+_SUCCESS:
 	return 1;
 _ERROR:
 	return 0;
