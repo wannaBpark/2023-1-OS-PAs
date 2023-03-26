@@ -15,6 +15,9 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 /***********************************************************************
  * run_command()
@@ -31,19 +34,19 @@
 int run_command(int nr_tokens, char *tokens[])
 {
 	pid_t pid;
+	int status;
 	enum ProcessState {
 	    _FORK_ERROR = -1,
 	    CHILD_PROCESS = 0,
 	    PARENT_PROCESS = 1
 	};
+	//printf("number of tokens : %d\n", nr_tokens);
 	if (nr_tokens == 0) {
-	    fprintf(stderr, "Unable to execute %s\n", tokens[0]);
+	    //fprintf(stderr, "Unable to execute %s\n", tokens[0]);
 	    goto _ERROR;
 	} else if (strcmp(tokens[0], "exit") == 0) {
-		goto _ERROR;
+	    goto _ERROR;
 	}
-_ERROR:
-	return 0;
 
 _FORK:
 	pid = fork();
@@ -51,12 +54,17 @@ _FORK:
 	if (pid < _FORK_ERROR) {
 	    goto _FORK;		
 	} else if (pid >= PARENT_PROCESS) {
-	    
+	    waitpid(pid, &status, 0);
+	    //printf("Child status: %d\n", status);
 	} else if (pid == CHILD_PROCESS) {
-	    execvp(tokens[0], tokens);
+	    if (-1 == execvp(tokens[0], tokens)){
+	        fprintf(stderr, "Unable to execute %s\n", tokens[0]);
+		exit(EXIT_FAILURE);
+	    }
 	}
-
 	return 1;
+_ERROR:
+	return 0;
 }
 
 
