@@ -163,15 +163,15 @@ _FORK:
             }
 	    //pipe(fd2);
 	    close(fd2[0]);
-	    while (*pp_left != NULL) {
-	       	p_parent = *pp_left;
-	       	printf("copy from parent : %s\n", *pp_left);
+	    while (*pp_right != NULL) {
+	       	p_parent = *pp_right;
+	       	//printf("copy from parent : %s\n", *pp_left);
 	       	while (1) {
 	    	    write(fd2[1], p_parent, 1);
 	            if (*p_parent == '\0') break;
 			++p_parent;
 		}
-	        ++pp_left;
+	        ++pp_right;
             }
 	    close(fd2[1]);
 	    waitpid(pid, &status, 0);
@@ -202,15 +202,15 @@ _FORK:
 		goto _EXECUTE;
 	    } else {
 	        close(fd[0]);
-		while (*pp_right != NULL) {
-		    p_parent = *pp_right;
+		while (*pp_left != NULL) {
+		    p_parent = *pp_left;
 		    //printf("copy from parent : %s\n", *pp_right);
 		    while (1) {
 		        write(fd[1], p_parent, 1);
 			if (*p_parent == '\0') break;
 			++p_parent;
 		    }
-		    ++pp_right;
+		    ++pp_left;
 		}
 		close(fd[1]);
 		waitpid(pid2, &status, 0);
