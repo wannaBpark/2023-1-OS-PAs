@@ -122,7 +122,7 @@ Let's build my amazing shell with those system calls.
   ```
 - The shell should be able to process an unlimited number of aliases. This implies you need to use a list to maintain the defined aliases.
 
-- When you enter `alias` without any following arguments, the shell should list up currently defined aliases. The alias defined earlier should come before later ones. Handle spaces carefully so that there is no trailing space.
+- When you enter `alias` without any following arguments, the shell should list up currently defined aliases. The alias defined earlier should come before later ones. You should print the aliases into `stderr` to get graded properly. Also handle spaces carefully so that there is no trailing space.
   ```bash
   $ alias
   ll: ls -al
