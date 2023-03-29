@@ -34,12 +34,13 @@
 
 static char** pp_keys = NULL;
 static char** pp_vals = NULL;
+static int v_wordCnt[33];
 static size_t idx = 0;
 
 int run_command(int nr_tokens, char *tokens[])
 {
 	pid_t pid, pid2;
-	int status, cd, pos, i, flag = 0;
+	int status, cd, pos, i, k, flag = 0;
 	int fd[2];
 	char buf;
 	char command[4096] = {'\0'};
@@ -106,7 +107,7 @@ int run_command(int nr_tokens, char *tokens[])
 		++i;
 	    }
 	    //printf("pos already exists! : %d\n", pos);
-	    if (pos == -1) { // DOES NOT EXIST, ADD_TAIL
+	    if (pos == -1) { // DOES NOT EXIST, ADD_TAIL - FIRST, ADD NEW KEY
 		size_t length = strlen(tokens[1]);
 		char* newKey = NULL;
 	        char** tt = malloc(sizeof(char*) * (idx + 1));
@@ -128,7 +129,7 @@ int run_command(int nr_tokens, char *tokens[])
 		
 		pos = idx - 1;
 	    } else {
-	        //OVERWRITE Existing value
+	        //OVERWRITE Existing value, free existing value
 		char* p_existVal = *(pp_vals + pos);
 		free(p_existVal);
 	    }
@@ -145,6 +146,7 @@ int run_command(int nr_tokens, char *tokens[])
 		}
 	    }
 	    *(pp_vals + pos) = p_replace;
+	    v_wordCnt[pos] = nr_tokens - 2;
 	    //printf("Adding new keys and vals Finished!\n");
             goto _SUCCESS;
 	}
@@ -203,23 +205,60 @@ _FORK:
 _EXECUTE:
 	    // CHeck if it's cd command
 	    pos = -1;
-
-	    for (i = 0; i < nr_tokens; ++i) { 
-	    	for (j = 0; j < idx; ++j) {
+	    i = 0;
+//_ADDED_TOKENS:
+	    for (; i < nr_tokens; ++i) { 
+		for (k = 0; tokens[k] != NULL; ++k){
+		    //printf("cur tokens[%d] : %s\n", k, tokens[k]);
+		}
+		for (j = 0; j < idx; ++j) {
 		    char* p_k = *(pp_keys + j);
 		    if (!strcmp(tokens[i], p_k)) { // if tokens equals existing alias keys
 			char* p_v = *(pp_vals + j);
+			char* p_v_tok;
 			length = strlen(p_v);
 			pos = i;
-		        
+			v_wordCnt[j] = 0;
+			//printf("%s\n", p_v); 
+			// xyz Hello world : v_wordCnt = 2;
+			p_v_tok = strtok(p_v, " ");
+			while(p_v_tok != NULL) {  
+			    ++v_wordCnt[j];
+			    p_v_tok = strtok(NULL, " ");
+			}
+			for (k = 0; k < (int)length; ++k) {
+			    *(p_v + k) = (*(p_v + k) == '\0') ? ' ' : *(p_v + k);
+			}	        
+
+			//printf("%s FOUND word Count !! : %d\n", p_v, v_wordCnt[j]);
+			p_v_tok = strtok(p_v, " ");
+			for (k = nr_tokens + v_wordCnt[j] - 2; k >= i + v_wordCnt[j]; --k) { // Space back sizeof WordCNT - 1
+			    tokens[k] = tokens[k - v_wordCnt[j] + 1];
+			}
 			free(tokens[i]);
-			tokens[i] = malloc(sizeof(char) * (length + 1));
-			strcpy(tokens[i], p_v);
-			goto _FOUNDKEY;
+			
+			for (k = 0; p_v_tok != NULL; ++k) { // REPLACE with p_vals wordCnt Times, which is alias 
+			    tokens[i + k] = malloc(sizeof(char) * (strlen(p_v_tok) + 1) );
+			    strncpy(tokens[i + k], p_v_tok, strlen(p_v_tok) + 1); // Deep COPY for tokens
+			    //printf("COPYING TOKEN[j] : %s\n", p_v_tok);
+			    p_v_tok = strtok(NULL, " ");			    
+			}
+			for (k = 0; k < (int)length; ++k) { 
+			    *(p_v + k) = (*(p_v + k) == '\0') ? ' ' : *(p_v + k);
+			}
+		        nr_tokens += v_wordCnt[j] - 1;
+		        i += v_wordCnt[j] - 1;
+	                //printf("cur token[i] : %s wordCNT: %d\n", tokens[i + 1 - v_wordCnt[j]], v_wordCnt[j]);
+			
+			break;
+			//tokens[i] = malloc(sizeof(char) * (length + 1));
+			//strcpy(tokens[i], p_v);
+			//goto _FOUNDKEY;
 		    }
 	    	}
 	    }
-_FOUNDKEY:
+	    goto _FOUNDKEY;
+_FOUNDKEY: /*
 	    if (pos == 0) { //Things to do for 'll' 'ls -al'
 		char* p_a = NULL;
 		char* p_b = NULL;
@@ -245,10 +284,10 @@ _FOUNDKEY:
 		}
 		tokens[1] = p_b;
 
-		/*for (i = 0; i <= nr_tokens; ++i) {
-	  	    printf("token (%d) : %s\n", i, tokens[i]);
-		}*/
-	    }
+		//for (i = 0; i <= nr_tokens; ++i) {
+	  	//    printf("token (%d) : %s\n", i, tokens[i]);
+		//}
+	    }*/
 	    //printf("My PID : %d\n", getpid()); 
 	    if (-1 == execvp(tokens[0], tokens)) { //instructions that are NOT CD
 	        fprintf(stderr, "Unable to execute %s\n", tokens[0]);
