@@ -38,7 +38,7 @@ static size_t idx = 0;
 
 int run_command(int nr_tokens, char *tokens[])
 {
-	pid_t pid;
+	pid_t pid, pid2;
 	int status, cd, pos, i, flag = 0;
 	int fd[2];
 	char buf;
@@ -63,7 +63,7 @@ int run_command(int nr_tokens, char *tokens[])
 	        tokens[i] = NULL;
 		//pp_left = tokens;
 		pp_right = (tokens + i + 1);
-		++flag;
+		flag = 1;
 		pipe(fd);
 		goto _FORK;
 	    }
@@ -160,9 +160,9 @@ _FORK:
 	    if (flag != 1) {
 	        goto _SUCCESS;
 	    }
-	    pid = fork();
+	    pid2 = fork();
 
-	    if (pid == CHILD_PROCESS) {
+	    if (pid2 == CHILD_PROCESS) {
 	        dup2(fd[0], STDIN_FILENO);
 		close(fd[1]);
 
@@ -195,7 +195,7 @@ _FORK:
 		    ++pp_right;
 		}
 		close(fd[1]);
-		waitpid(pid, &status, 0);
+		waitpid(pid2, &status, 0);
 	    }
 	    goto _SUCCESS;
 	    //printf("Child status: %d\n", status);
