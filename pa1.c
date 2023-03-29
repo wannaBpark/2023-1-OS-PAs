@@ -207,7 +207,7 @@ _EXECUTE:
 	    for (i = 0; i < nr_tokens; ++i) { 
 	    	for (j = 0; j < idx; ++j) {
 		    char* p_k = *(pp_keys + j);
-		    if (!strcmp(tokens[i], p_k)) {
+		    if (!strcmp(tokens[i], p_k)) { // if tokens equals existing alias keys
 			char* p_v = *(pp_vals + j);
 			length = strlen(p_v);
 			pos = i;
@@ -289,6 +289,7 @@ int initialize(int argc, char * const argv[])
  */
 void finalize(int argc, char * const argv[])
 {
+	/*
     size_t i;
     char* p_k = NULL;
     char* p_v = NULL;
@@ -300,5 +301,5 @@ void finalize(int argc, char * const argv[])
 	free(p_v);
     }
     free(pp_vals);
-    free(pp_keys);
+    free(pp_keys);*/
 }
