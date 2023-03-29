@@ -40,9 +40,14 @@ int run_command(int nr_tokens, char *tokens[])
 {
 	pid_t pid;
 	int status, cd, pos, i, flag = 0;
-	int pfd[2];
-	char** pp_left = NULL;
+	int fd[2];
+	char buf;
+	char command[4096] = {'\0'};
+	//char** pp_left = NULL;
 	char** pp_right = NULL;
+	char* p_parent = NULL;
+	//char* p_child = NULL;
+	size_t length, j;
 	//static char** pp_keys = NULL;
 	//static char** pp_vals = NULL;
 	//size_t idx = 0, i;
@@ -53,12 +58,13 @@ int run_command(int nr_tokens, char *tokens[])
 	    PARENT_PROCESS = 1
 	};
 	for (i = 0; i < nr_tokens; ++i) {
-	    printf("token (%d) : %s\n", i, tokens[i]);
+	    //printf("token (%d) : %s\n", i, tokens[i]);
 	    if (!strcmp(tokens[i], "|")) {
 	        tokens[i] = NULL;
-		pp_left = tokens;
+		//pp_left = tokens;
 		pp_right = (tokens + i + 1);
 		++flag;
+		pipe(fd);
 		goto _FORK;
 	    }
 	}
@@ -83,7 +89,7 @@ int run_command(int nr_tokens, char *tokens[])
 	    
 	    if (nr_tokens == 1) { // Just Print out existing keys and vals
 	        while ((size_t)i < idx) {
-		    printf("%s: %s\n", *(pp_keys + i), *(pp_vals + i));
+		    fprintf(stderr, "%s: %s\n", *(pp_keys + i), *(pp_vals + i));
 		    i++;
 		}
 		//printf("PRINT ALL ALIAS COMPLETELY!\n");
@@ -150,13 +156,53 @@ _FORK:
 	    goto _FORK;		
 	} else if (pid >= PARENT_PROCESS) {
 	    waitpid(pid, &status, 0);
+
+	    if (flag != 1) {
+	        goto _SUCCESS;
+	    }
+	    pid = fork();
+
+	    if (pid == CHILD_PROCESS) {
+	        dup2(fd[0], STDIN_FILENO);
+		close(fd[1]);
+
+		i = j = 0;
+		while (read(fd[0], &buf, 1) > 0) {
+		    //write(STDOUT_FILENO, &buf, 1);
+		    command[i++] = buf;
+		    if (buf == '\0'){
+		        //printf("complete! : %s\n", command);
+			tokens[j] = realloc(tokens[j], sizeof(char) * (strlen(command) + 1));
+			strcpy(tokens[j], command);
+			i = 0;
+			++j;
+		    }
+		}
+		close(fd[0]);
+		tokens[j] = NULL;
+	
+		goto _EXECUTE;
+	    } else {
+	        close(fd[0]);
+		while (*pp_right != NULL) {
+		    p_parent = *pp_right;
+		    //printf("copy from parent : %s\n", *pp_right);
+		    while (1) {
+		        write(fd[1], p_parent, 1);
+			if (*p_parent == '\0') break;
+			++p_parent;
+		    }
+		    ++pp_right;
+		}
+		close(fd[1]);
+		waitpid(pid, &status, 0);
+	    }
+	    goto _SUCCESS;
 	    //printf("Child status: %d\n", status);
 	} else if (pid == CHILD_PROCESS) {
+_EXECUTE:
 	    // CHeck if it's cd command
-	    size_t length, j;
 	    pos = -1;
-
-
 
 	    for (i = 0; i < nr_tokens; ++i) { 
 	    	for (j = 0; j < idx; ++j) {
@@ -203,7 +249,7 @@ _FOUNDKEY:
 	  	    printf("token (%d) : %s\n", i, tokens[i]);
 		}*/
 	    }
-	    
+	    //printf("My PID : %d\n", getpid()); 
 	    if (-1 == execvp(tokens[0], tokens)) { //instructions that are NOT CD
 	        fprintf(stderr, "Unable to execute %s\n", tokens[0]);
 		exit(EXIT_FAILURE);
