@@ -41,10 +41,10 @@ int run_command(int nr_tokens, char *tokens[])
 {
 	pid_t pid, pid2;
 	int status, cd, pos, i, k, flag = 0;
-	int fd[2];
+	int fd[2], fd2[2];
 	char buf;
 	char command[4096] = {'\0'};
-	//char** pp_left = NULL;
+	char** pp_left = NULL;
 	char** pp_right = NULL;
 	char* p_parent = NULL;
 	//char* p_child = NULL;
@@ -62,10 +62,11 @@ int run_command(int nr_tokens, char *tokens[])
 	    //printf("token (%d) : %s\n", i, tokens[i]);
 	    if (!strcmp(tokens[i], "|")) {
 	        tokens[i] = NULL;
-		//pp_left = tokens;
+		pp_left = tokens;
 		pp_right = (tokens + i + 1);
 		flag = 1;
 		pipe(fd);
+		pipe(fd2);
 		goto _FORK;
 	    }
 	}
@@ -157,11 +158,26 @@ _FORK:
 	if (pid < _FORK_ERROR) {
 	    goto _FORK;		
 	} else if (pid >= PARENT_PROCESS) {
+	    if (flag != 1 ) {
+		goto _SUCCESS;
+            }
+	    //pipe(fd2);
+	    close(fd2[0]);
+	    while (*pp_left != NULL) {
+	       	p_parent = *pp_left;
+	       	printf("copy from parent : %s\n", *pp_left);
+	       	while (1) {
+	    	    write(fd2[1], p_parent, 1);
+	            if (*p_parent == '\0') break;
+			++p_parent;
+		}
+	        ++pp_left;
+            }
+	    close(fd2[1]);
 	    waitpid(pid, &status, 0);
+	    //OINASDIOFHJASIDJFKLASJDKFJASDKFJASDKFAJSDKFJASKDJFAKSDJF!!!!!!!!!!!!!! waitpid(pid, &status, 0);
+            
 
-	    if (flag != 1) {
-	        goto _SUCCESS;
-	    }
 	    pid2 = fork();
 
 	    if (pid2 == CHILD_PROCESS) {
@@ -198,11 +214,30 @@ _FORK:
 		}
 		close(fd[1]);
 		waitpid(pid2, &status, 0);
+		//waitpid(pid, &status, 0);
+	        //CHANGAHJCNAHGNCHANAGHANEHGAN
 	    }
 	    goto _SUCCESS;
 	    //printf("Child status: %d\n", status);
 	} else if (pid == CHILD_PROCESS) {
 _EXECUTE:
+	    if (flag == 1) {
+	        dup2(fd2[0], STDIN_FILENO);
+                close(fd2[1]);
+		i = j = 0;
+		
+		while (read(fd2[0], &buf, 1) > 0) {
+		    command[i++] = buf;
+		    if (buf == '\0') {
+		        tokens[j] = realloc(tokens[j], sizeof(char) * (strlen(command) + 1));
+			strcpy(tokens[j], command);
+			i = 0;
+			++j;
+		    }
+		}	
+		close(fd2[0]);
+		tokens[j] = NULL;	
+	    }
 	    // CHeck if it's cd command
 	    pos = -1;
 	    i = 0;
