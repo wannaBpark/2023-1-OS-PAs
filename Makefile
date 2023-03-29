@@ -39,5 +39,5 @@ test-pipe: $(TARGET) testcases/test-pipe
 test-all: $(TARGET) testcases/test-all
 	./$< -q < testcases/test-all
 
-test-all-case: test-run test-cd test-aliases test-pipe test-all
+test-all_case: test-run test-cd test-aliases test-pipe test-all
 	echo
