@@ -27,13 +27,17 @@ test-run: $(TARGET) toy testcases/test-run
 test-cd: $(TARGET) testcases/test-cd
 	./$< -q < testcases/test-cd
 
-.PHONY: test-aliases
-test-history: $(TARGET) testcases/test-aliases
-	./$< -q < testcases/test-aliases
+.PHONY: test-alias
+test-history: $(TARGET) testcases/test-alias
+	./$< -q < testcases/test-alias
 
 .PHONY: test-pipe
 test-pipe: $(TARGET) testcases/test-pipe
 	./$< -q < testcases/test-pipe
 
-test-all: test-run test-cd test-history test-pipe
-	echo
+.PHONY: test-all
+test-all: $(TARGET) testcases/test-all
+	./$< -q < testcases/test-all
+
+.PHONY: test-alls
+test-alls: test-run test-cd test-alias test-pipe test-all
