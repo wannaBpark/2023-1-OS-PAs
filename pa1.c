@@ -45,10 +45,8 @@ static size_t idx = 0;
 int run_command(int nr_tokens, char *tokens[])
 {
 	pid_t pid, pid2;
-	int status, cd, pos, i, flag = 0, nr_tokens_right, nr_tokens_left;
+	int status, cd, pos, i = 0, flag = 0, nr_tokens_right, nr_tokens_left;
 	int fd2[2];
-	//char command[4096] = {'\0'};
-	char** pp_left = NULL;
 	char** pp_right = NULL;
 	enum ProcessState {
 	    _FORK_ERROR = -1,
@@ -56,16 +54,15 @@ int run_command(int nr_tokens, char *tokens[])
 	    PARENT_PROCESS = 1
 	};
 
-	// CHECK IF IT's PIPE | COMMANd 
+	// CHECK IF IT's PIPE | COMMAND 
 	for (i = 0; i < nr_tokens; ++i) {
 	    if (!strcmp(tokens[i], "|")) {
 	        tokens[i] = NULL;
-		pp_left = tokens; pp_right = (tokens + i + 1);
+		pp_right = (tokens + i + 1);
 		flag = 1;
 		pipe(fd2);
 
-		nr_tokens_left = i;
-		nr_tokens_right = nr_tokens - nr_tokens_left - 1;
+		nr_tokens_left = i; nr_tokens_right = nr_tokens - nr_tokens_left - 1;
 		goto _FORK;
 	    }
 	}
@@ -75,6 +72,7 @@ int run_command(int nr_tokens, char *tokens[])
 	} else if (strcmp(tokens[0], "exit") == 0) {
 	    goto _ERROR;
 	}
+	
 	if (!strcmp("cd", tokens[0])){
 	    cd = (nr_tokens == 1 || !strcmp("~", tokens[1])) ? chdir(getenv("HOME")) : chdir(tokens[1]);
 	    if (cd == -1) {
@@ -83,9 +81,7 @@ int run_command(int nr_tokens, char *tokens[])
 	    goto _SUCCESS;
 	} else if (!strcmp("alias", tokens[0])) { // If it's alias instruction
 	    size_t totLength = 0;
-	    char* p_replace = NULL;
-	    pos = -1;
-	    i = 0;
+	    char* p_newValue = NULL;
 	    
 	    if (nr_tokens == 1) { // Just Print out existing keys and vals
 	        while ((size_t)i < idx) {
@@ -101,46 +97,39 @@ int run_command(int nr_tokens, char *tokens[])
 	    if (pos == -1) { // DOES NOT EXIST, ADD_TAIL - FIRST, ADD NEW KEY
 		size_t length = strlen(tokens[1]);
 		char* newKey = NULL;
-	        char** tt = malloc(sizeof(char*) * (idx + 1));
-		memcpy(tt, pp_keys, sizeof(char*) * idx);
-		free(pp_keys);
-		pp_keys = tt;
-
-		tt = malloc(sizeof(char*) * (idx + 1));
-		memcpy(tt, pp_vals, sizeof(char*) * idx);
-		free(pp_vals);
-		pp_vals = tt;
-
-		++idx;
+	              
+		pp_keys = realloc(pp_keys, sizeof(char*) * (idx + 1));	
+		pp_vals = realloc(pp_vals, sizeof(char*) * (idx + 1));
 
 		newKey = malloc(sizeof(char) * (length + 1));
 		strcpy(newKey, tokens[1]);
-		*(pp_keys + idx - 1) = newKey;
-		
-		pos = idx - 1;
+		pp_keys[idx] = newKey;	
+		pos = idx;
+
+		++idx;
 	    } else {
 	        //OVERWRITE Existing value, free existing value
-		char* p_existVal = *(pp_vals + pos);
+		char* p_existVal = pp_vals[pos];
 		free(p_existVal);
 	    }
 	    
+	    for (i = 2; i < nr_tokens; ++i) 
+	        totLength += strlen(tokens[i]);
+
+	    p_newValue= malloc(sizeof(char) * (totLength + nr_tokens - 3 + 1));
+	    p_newValue[0] = '\0';
 	    for (i = 2; i < nr_tokens; ++i) {
-		totLength += strlen(tokens[i]); 
-	    }
-	    p_replace = malloc(sizeof(char) * (totLength + nr_tokens - 3 + 1));
-	    p_replace[0] = '\0';
-	    for (i = 2; i < nr_tokens; ++i) {
-		strcat(p_replace, tokens[i]);
+		strcat(p_newValue, tokens[i]);
 		if (i != nr_tokens - 1) {
-		    strcat(p_replace, " ");
+		    strcat(p_newValue, " ");
 		}
 	    }
-	    *(pp_vals + pos) = p_replace;
+	    pp_vals[pos] = p_newValue;
 	    v_wordCnt[pos] = get_value_wordCnt(pos);
-            goto _SUCCESS;
+            
+	    goto _SUCCESS;
 	}
-_FORK:
-	
+_FORK:	
 	pid = fork();
 	if (pid < _FORK_ERROR) {
 	    goto _FORK;		
@@ -156,11 +145,9 @@ _FORK:
 		nr_tokens = nr_tokens_left;
 		goto _ADDED_TOKENS;
 	    }
-	    pp_left = pp_left;
 	    
 	    waitpid(pid2, &status, 0); close(fd2[1]);
 	    waitpid(pid, &status, 0); close(fd2[0]);
-	    flag = 0;
 	    goto _SUCCESS;
 	} else if (pid == CHILD_PROCESS) {
 	    if (flag == 1) {
@@ -195,16 +182,6 @@ _ERROR:
 	return 0;
 }
 
-void check_command_cd()
-{
-    return;
-}
-
-void check_command_alias()
-{
-    return;
-}
-
 int get_value_wordCnt(int idx)
 {
     char* p_v = *(pp_vals + idx);
@@ -216,7 +193,6 @@ int get_value_wordCnt(int idx)
         ++ret;
 	p_v_tok = strtok(NULL, " ");
     }
-
     for (j = 0; j < length; ++j) {
         *(p_v + j) = (*(p_v + j) == '\0') ? ' ' : *(p_v + j);
     }
@@ -230,9 +206,7 @@ int find_alias_index(char* p_tok)
     size_t i = 0;    
     while (i < idx) {
         char* p_keys = *(pp_keys + i);
-	if (!strcmp(p_keys, p_tok)) {
-	    return ret = i;
-	}
+	if (!strcmp(p_keys, p_tok)) return ret = i;
 	++i;
     }
     return ret;
@@ -240,10 +214,9 @@ int find_alias_index(char* p_tok)
 
 void space_back_wordCnt(char** pp_tok, int cur_nr_tokens, int tokIdx, int valIdx)
 {
-    int i;
-    int wordCnt = v_wordCnt[valIdx];
-
-    for (i = cur_nr_tokens + wordCnt - 2; i >= tokIdx + wordCnt; --i) { // Space back sizeof WordCNT - 1
+    int i, wordCnt = v_wordCnt[valIdx];
+    // Space back sizeof WordCNT - 1
+    for (i = cur_nr_tokens + wordCnt - 2; i >= tokIdx + wordCnt; --i) { 
         pp_tok[i] = pp_tok[i - wordCnt + 1];
     }
     pp_tok[cur_nr_tokens + wordCnt - 1] = NULL;
@@ -264,10 +237,11 @@ void replace_token_with_alias(char*** ppp_tok, int tokIdx, int valIdx)
 
     for (j = 0; p_v_tok != NULL; ++j) {
 	length_tok = strlen(p_v_tok);
+	
 	tmp = malloc(sizeof(char) * (length_tok + 1));
 	strncpy(tmp, p_v_tok, (length_tok + 1));
-
 	pp_tok[tokIdx + j] = tmp;
+
 	p_v_tok = strtok(NULL, " ");
     }
 
