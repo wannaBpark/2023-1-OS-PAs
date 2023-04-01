@@ -40,7 +40,7 @@ static size_t idx = 0;
 int run_command(int nr_tokens, char *tokens[])
 {
 	pid_t pid, pid2;
-	int status, cd, pos, i, k, flag = 0;
+	int status, cd, pos, i, k, flag = 0, nr_tokens_right, nr_tokens_left;
 	int fd[2], fd2[2];
 	char buf;
 	char command[4096] = {'\0'};
@@ -67,6 +67,9 @@ int run_command(int nr_tokens, char *tokens[])
 		flag = 1;
 		pipe(fd);
 		pipe(fd2);
+
+		nr_tokens_left = i + 1;
+		nr_tokens_right = nr_tokens - nr_tokens_left - 1;
 		goto _FORK;
 	    }
 	}
@@ -152,96 +155,53 @@ int run_command(int nr_tokens, char *tokens[])
             goto _SUCCESS;
 	}
 _FORK:
-	// *************START FROM HERE!if (flag == 1) pipe(pfd);
+	
 	pid = fork();
-
+	buf += 1;
 	if (pid < _FORK_ERROR) {
 	    goto _FORK;		
+	} else if (pid == CHILD_PROCESS && flag == 1) {
+	    close(fd[0]); close(fd[1]);
+	    dup2(fd2[0], STDIN_FILENO);
+	    close(fd2[1]);
+	    tokens = pp_right;
+	    nr_tokens = nr_tokens_right;
+	    goto _ADDED_TOKENS;
 	} else if (pid >= PARENT_PROCESS) {
 	    if (flag != 1 ) {
+		waitpid(pid, &status, 0);
 		goto _SUCCESS;
             }
 	    //pipe(fd2);
-	    close(fd2[0]);
-	    while (*pp_right != NULL) {
-	       	p_parent = *pp_right;
-	       	//printf("copy from parent : %s\n", *pp_left);
-	       	while (1) {
-	    	    write(fd2[1], p_parent, 1);
-	            if (*p_parent == '\0') break;
-			++p_parent;
-		}
-	        ++pp_right;
-            }
+	    //close(fd[0]); close(fd2[0]); close(fd2[1]);
+	    //close(fd[1]);
+	    close(fd[0]);
+	    close(fd[1]);
+	    pid2 = fork();
+	    if (pid2 == CHILD_PROCESS) {
+	        dup2(fd2[1], STDOUT_FILENO);
+		nr_tokens = nr_tokens_left;
+		goto _ADDED_TOKENS;
+	    }
+
+	    p_parent = p_parent;
+	    command[0] = command[0];
+	    buf += 1;
+	    pp_left = pp_left;
+	    
+	    waitpid(pid2, &status, 0);
 	    close(fd2[1]);
 	    waitpid(pid, &status, 0);
-	    //OINASDIOFHJASIDJFKLASJDKFJASDKFJASDKFAJSDKFJASKDJFAKSDJF!!!!!!!!!!!!!! waitpid(pid, &status, 0);
-            
-
-	    pid2 = fork();
-
-	    if (pid2 == CHILD_PROCESS) {
-	        dup2(fd[0], STDIN_FILENO);
-		close(fd[1]);
-
-		i = j = 0;
-		while (read(fd[0], &buf, 1) > 0) {
-		    //write(STDOUT_FILENO, &buf, 1);
-		    command[i++] = buf;
-		    if (buf == '\0'){
-		        //printf("complete! : %s\n", command);
-			tokens[j] = realloc(tokens[j], sizeof(char) * (strlen(command) + 1));
-			strcpy(tokens[j], command);
-			i = 0;
-			++j;
-		    }
-		}
-		close(fd[0]);
-		tokens[j] = NULL;
-	
-		goto _EXECUTE;
-	    } else {
-	        close(fd[0]);
-		while (*pp_left != NULL) {
-		    p_parent = *pp_left;
-		    //printf("copy from parent : %s\n", *pp_right);
-		    while (1) {
-		        write(fd[1], p_parent, 1);
-			if (*p_parent == '\0') break;
-			++p_parent;
-		    }
-		    ++pp_left;
-		}
-		close(fd[1]);
-		waitpid(pid2, &status, 0);
-		//waitpid(pid, &status, 0);
-	        //CHANGAHJCNAHGNCHANAGHANEHGAN
-	    }
+	    //close(fd2[1]);
+	    close(fd2[0]);
 	    goto _SUCCESS;
 	    //printf("Child status: %d\n", status);
 	} else if (pid == CHILD_PROCESS) {
-_EXECUTE:
-	    if (flag == 1) {
-	        dup2(fd2[0], STDIN_FILENO);
-                close(fd2[1]);
-		i = j = 0;
-		
-		while (read(fd2[0], &buf, 1) > 0) {
-		    command[i++] = buf;
-		    if (buf == '\0') {
-		        tokens[j] = realloc(tokens[j], sizeof(char) * (strlen(command) + 1));
-			strcpy(tokens[j], command);
-			i = 0;
-			++j;
-		    }
-		}	
-		close(fd2[0]);
-		tokens[j] = NULL;	
-	    }
-	    // CHeck if it's cd command
+//_EXECUTE:
+
+_ADDED_TOKENS:
 	    pos = -1;
 	    i = 0;
-//_ADDED_TOKENS:
 	    for (; i < nr_tokens; ++i) { 
 		for (k = 0; tokens[k] != NULL; ++k){
 		    //printf("cur tokens[%d] : %s\n", k, tokens[k]);
@@ -292,6 +252,7 @@ _EXECUTE:
 		    }
 	    	}
 	    }
+	
 	    goto _FOUNDKEY;
 _FOUNDKEY: /*
 	    if (pos == 0) { //Things to do for 'll' 'ls -al'
@@ -328,6 +289,9 @@ _FOUNDKEY: /*
 	        fprintf(stderr, "Unable to execute %s\n", tokens[0]);
 		exit(EXIT_FAILURE);
 	    }
+
+	    if (pid2 == CHILD_PROCESS) close(fd2[1]);
+	    else if (pid == CHILD_PROCESS) close(fd2[0]);
 	}
 _SUCCESS:
 	return 1;
