@@ -68,8 +68,10 @@ int run_command(int nr_tokens, char *tokens[])
 		pipe(fd);
 		pipe(fd2);
 
-		nr_tokens_left = i + 1;
+		nr_tokens_left = i;
 		nr_tokens_right = nr_tokens - nr_tokens_left - 1;
+
+		//printf("left : %d right : %d\n", nr_tokens_left, nr_tokens_right);
 		goto _FORK;
 	    }
 	}
@@ -194,6 +196,7 @@ _FORK:
 	    waitpid(pid, &status, 0);
 	    //close(fd2[1]);
 	    close(fd2[0]);
+	    flag = 0;
 	    goto _SUCCESS;
 	    //printf("Child status: %d\n", status);
 	} else if (pid == CHILD_PROCESS) {
@@ -202,12 +205,15 @@ _FORK:
 _ADDED_TOKENS:
 	    pos = -1;
 	    i = 0;
-	    for (; i < nr_tokens; ++i) { 
+	    for (; i < nr_tokens; ++i) {
 		for (k = 0; tokens[k] != NULL; ++k){
-		    //printf("cur tokens[%d] : %s\n", k, tokens[k]);
+		   // printf("cur tokens[%d] : %s\n", k, tokens[k]);
 		}
 		for (j = 0; j < idx; ++j) {
 		    char* p_k = *(pp_keys + j);
+		    if (flag == 1) {
+		        //printf("tokens: %s p_keys : %s\n", tokens[i], p_k);
+		    }
 		    if (!strcmp(tokens[i], p_k)) { // if tokens equals existing alias keys
 			char* p_v = *(pp_vals + j);
 			char* p_v_tok;
@@ -252,6 +258,12 @@ _ADDED_TOKENS:
 		    }
 	    	}
 	    }
+	   // printf("cur nr_tokens : %d\n", nr_tokens);
+	    if (pid == CHILD_PROCESS && flag == 1)  {
+	    for (i = 0; i < nr_tokens; ++i) {
+	       // printf("After Aliased : %s\n", *(tokens + i));
+	    }
+	    }
 	
 	    goto _FOUNDKEY;
 _FOUNDKEY: /*
@@ -290,8 +302,8 @@ _FOUNDKEY: /*
 		exit(EXIT_FAILURE);
 	    }
 
-	    if (pid2 == CHILD_PROCESS) close(fd2[1]);
-	    else if (pid == CHILD_PROCESS) close(fd2[0]);
+	    //if (pid2 == CHILD_PROCESS) close(fd2[1]);
+	    //else if (pid == CHILD_PROCESS) close(fd2[0]);
 	}
 _SUCCESS:
 	return 1;
