@@ -28,8 +28,8 @@ test-cd: $(TARGET) testcases/test-cd
 	./$< -q < testcases/test-cd
 
 .PHONY: test-alias
-test-history: $(TARGET) testcases/test-alias
-	./$< -q < testcases/test-alias
+test-alias: $(TARGET) testcases/test-aliases
+	./$< -q < testcases/test-aliases
 
 .PHONY: test-pipe
 test-pipe: $(TARGET) testcases/test-pipe

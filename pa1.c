@@ -229,7 +229,7 @@ _ADDED_TOKENS:
 			}
 			for (k = 0; k < (int)length; ++k) {
 			    *(p_v + k) = (*(p_v + k) == '\0') ? ' ' : *(p_v + k);
-			}	        
+			}	       
 
 			//printf("%s FOUND word Count !! : %d\n", p_v, v_wordCnt[j]);
 			p_v_tok = strtok(p_v, " ");
@@ -237,10 +237,12 @@ _ADDED_TOKENS:
 			    tokens[k] = tokens[k - v_wordCnt[j] + 1];
 			}
 			free(tokens[i]);
-			
+			tokens[nr_tokens + v_wordCnt[j] - 1] = NULL;
 			for (k = 0; p_v_tok != NULL; ++k) { // REPLACE with p_vals wordCnt Times, which is alias 
-			    tokens[i + k] = malloc(sizeof(char) * (strlen(p_v_tok) + 1) );
-			    strncpy(tokens[i + k], p_v_tok, strlen(p_v_tok) + 1); // Deep COPY for tokens
+			    char* tmp = malloc(sizeof(char) * (strlen(p_v_tok) + 1 )  );
+			    strncpy(tmp, p_v_tok, (strlen(p_v_tok ) + 1) ); // Deep COPY for tokens
+			    tokens[i + k] = tmp;
+			    //printf("TESTING REPLACED TOKENS : %s||||%s|||and length : %ld\n", tokens[i + k], p_v_tok, strlen(p_v_tok));
 			    //printf("COPYING TOKEN[j] : %s\n", p_v_tok);
 			    p_v_tok = strtok(NULL, " ");			    
 			}
@@ -258,7 +260,10 @@ _ADDED_TOKENS:
 		    }
 	    	}
 	    }
-	   // printf("cur nr_tokens : %d\n", nr_tokens);
+	    for (i = 0; i < nr_tokens; ++i){
+	       // printf("%s||result sizeof(tokens[i])%ld\n", tokens[i], strlen(tokens[i]));
+	    }
+	    //printf("cur nr_tokens : %d\n", nr_tokens);
 	    if (pid == CHILD_PROCESS && flag == 1)  {
 	    for (i = 0; i < nr_tokens; ++i) {
 	       // printf("After Aliased : %s\n", *(tokens + i));
