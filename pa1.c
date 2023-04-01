@@ -83,10 +83,11 @@ int run_command(int nr_tokens, char *tokens[])
 	    size_t totLength = 0;
 	    char* p_newValue = NULL;
 	    
+	    i = 0;
 	    if (nr_tokens == 1) { // Just Print out existing keys and vals
 	        while ((size_t)i < idx) {
 		    fprintf(stderr, "%s: %s\n", *(pp_keys + i), *(pp_vals + i));
-		    i++;
+		    ++i;
 		}
 		goto _SUCCESS;
 	    }
@@ -124,6 +125,7 @@ int run_command(int nr_tokens, char *tokens[])
 		    strcat(p_newValue, " ");
 		}
 	    }
+	    
 	    pp_vals[pos] = p_newValue;
 	    v_wordCnt[pos] = get_value_wordCnt(pos);
             
@@ -168,8 +170,6 @@ _ADDED_TOKENS:
 		    i += v_wordCnt[pos] - 1;	
 		}
 	    }
-	    goto _FOUNDKEY;
-_FOUNDKEY: 
 	    if (-1 == execvp(tokens[0], tokens)) { //instructions that are NOT CD
 	        fprintf(stderr, "Unable to execute %s\n", tokens[0]);
 		exit(EXIT_FAILURE);
@@ -186,8 +186,8 @@ int get_value_wordCnt(int idx)
 {
     char* p_v = *(pp_vals + idx);
     char* p_v_tok;
-    size_t j, length = strlen(p_v);
-    size_t ret = 0;
+    size_t j, length = strlen(p_v), ret = 0;
+
     p_v_tok = strtok(p_v, " ");
     while (p_v_tok != NULL) {
         ++ret;
