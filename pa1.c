@@ -31,61 +31,54 @@
  *   Return 0 when user inputs "exit"
  *   Return <0 on error
  */
+int find_alias_index(char* p_tok);
+int get_value_wordCnt(int index);
+void replace_token_with_alias(char*** ppp_tok, int tokIdx, int valIdx);
+void space_back_wordCnt(char**, int, int, int);
 
 static char** pp_keys = NULL;
 static char** pp_vals = NULL;
 static int v_wordCnt[33];
 static size_t idx = 0;
 
+
 int run_command(int nr_tokens, char *tokens[])
 {
 	pid_t pid, pid2;
-	int status, cd, pos, i, k, flag = 0, nr_tokens_right, nr_tokens_left;
-	int fd[2], fd2[2];
-	char buf;
-	char command[4096] = {'\0'};
+	int status, cd, pos, i, flag = 0, nr_tokens_right, nr_tokens_left;
+	int fd2[2];
+	//char command[4096] = {'\0'};
 	char** pp_left = NULL;
 	char** pp_right = NULL;
-	char* p_parent = NULL;
-	//char* p_child = NULL;
-	size_t length, j;
-	//static char** pp_keys = NULL;
-	//static char** pp_vals = NULL;
-	//size_t idx = 0, i;
-	//char* env_PATH;
 	enum ProcessState {
 	    _FORK_ERROR = -1,
 	    CHILD_PROCESS = 0,
 	    PARENT_PROCESS = 1
 	};
+
+	// CHECK IF IT's PIPE | COMMANd 
 	for (i = 0; i < nr_tokens; ++i) {
-	    //printf("token (%d) : %s\n", i, tokens[i]);
 	    if (!strcmp(tokens[i], "|")) {
 	        tokens[i] = NULL;
-		pp_left = tokens;
-		pp_right = (tokens + i + 1);
+		pp_left = tokens; pp_right = (tokens + i + 1);
 		flag = 1;
-		pipe(fd);
 		pipe(fd2);
 
 		nr_tokens_left = i;
 		nr_tokens_right = nr_tokens - nr_tokens_left - 1;
-
-		//printf("left : %d right : %d\n", nr_tokens_left, nr_tokens_right);
 		goto _FORK;
 	    }
 	}
-	//setenv("HOME", "/home/osos/os-pa1", 1);
 	if (nr_tokens == 0) {
-	    //fprintf(stderr, "Unable to execute %s\n", tokens[0]);
+	    fprintf(stderr, "Unable to execute %s\n", tokens[0]);
 	    goto _ERROR;
 	} else if (strcmp(tokens[0], "exit") == 0) {
 	    goto _ERROR;
 	}
 	if (!strcmp("cd", tokens[0])){
 	    cd = (nr_tokens == 1 || !strcmp("~", tokens[1])) ? chdir(getenv("HOME")) : chdir(tokens[1]);
-	    if (cd != 0) { // If CD fails
-		//printf("Somehow, cd failed %s\n", tokens[1]);
+	    if (cd == -1) {
+	    	fprintf(stderr, "CD FAILED\n");
 	    }
 	    goto _SUCCESS;
 	} else if (!strcmp("alias", tokens[0])) { // If it's alias instruction
@@ -99,20 +92,12 @@ int run_command(int nr_tokens, char *tokens[])
 		    fprintf(stderr, "%s: %s\n", *(pp_keys + i), *(pp_vals + i));
 		    i++;
 		}
-		//printf("PRINT ALL ALIAS COMPLETELY!\n");
 		goto _SUCCESS;
 	    }
 	    // IF allocating a new alias...
 
-	    while ((size_t)i < idx) { //find if KEY DOES EXIST
-		char* p_curKey = *(pp_keys + i);
-		if (!strcmp(tokens[1], p_curKey)) {
-		    pos = i; 
-		    break;
-		}
-		++i;
-	    }
-	    //printf("pos already exists! : %d\n", pos);
+	    // FIND if KEY DOES EXIST
+	    pos = find_alias_index(tokens[1]);
 	    if (pos == -1) { // DOES NOT EXIST, ADD_TAIL - FIRST, ADD NEW KEY
 		size_t length = strlen(tokens[1]);
 		char* newKey = NULL;
@@ -126,7 +111,6 @@ int run_command(int nr_tokens, char *tokens[])
 		free(pp_vals);
 		pp_vals = tt;
 
-		//printf("CUR ALIAS IDX : %ld\n", idx + 1);
 		++idx;
 
 		newKey = malloc(sizeof(char) * (length + 1));
@@ -152,170 +136,147 @@ int run_command(int nr_tokens, char *tokens[])
 		}
 	    }
 	    *(pp_vals + pos) = p_replace;
-	    v_wordCnt[pos] = nr_tokens - 2;
-	    //printf("Adding new keys and vals Finished!\n");
+	    v_wordCnt[pos] = get_value_wordCnt(pos);
             goto _SUCCESS;
 	}
 _FORK:
 	
 	pid = fork();
-	buf += 1;
 	if (pid < _FORK_ERROR) {
 	    goto _FORK;		
-	} else if (pid == CHILD_PROCESS && flag == 1) {
-	    close(fd[0]); close(fd[1]);
-	    dup2(fd2[0], STDIN_FILENO);
-	    close(fd2[1]);
-	    tokens = pp_right;
-	    nr_tokens = nr_tokens_right;
-	    goto _ADDED_TOKENS;
 	} else if (pid >= PARENT_PROCESS) {
 	    if (flag != 1 ) {
 		waitpid(pid, &status, 0);
 		goto _SUCCESS;
             }
-	    //pipe(fd2);
-	    //close(fd[0]); close(fd2[0]); close(fd2[1]);
-	    //close(fd[1]);
-	    close(fd[0]);
-	    close(fd[1]);
+
 	    pid2 = fork();
 	    if (pid2 == CHILD_PROCESS) {
 	        dup2(fd2[1], STDOUT_FILENO);
 		nr_tokens = nr_tokens_left;
 		goto _ADDED_TOKENS;
 	    }
-
-	    p_parent = p_parent;
-	    command[0] = command[0];
-	    buf += 1;
 	    pp_left = pp_left;
 	    
-	    waitpid(pid2, &status, 0);
-	    close(fd2[1]);
-	    waitpid(pid, &status, 0);
-	    //close(fd2[1]);
-	    close(fd2[0]);
+	    waitpid(pid2, &status, 0); close(fd2[1]);
+	    waitpid(pid, &status, 0); close(fd2[0]);
 	    flag = 0;
 	    goto _SUCCESS;
-	    //printf("Child status: %d\n", status);
 	} else if (pid == CHILD_PROCESS) {
-//_EXECUTE:
-
+	    if (flag == 1) {
+	    	dup2(fd2[0], STDIN_FILENO); close(fd2[1]);
+	    	tokens = pp_right; nr_tokens = nr_tokens_right;
+	    }
 _ADDED_TOKENS:
-	    pos = -1;
-	    i = 0;
-	    for (; i < nr_tokens; ++i) {
-		for (k = 0; tokens[k] != NULL; ++k){
-		   // printf("cur tokens[%d] : %s\n", k, tokens[k]);
-		}
-		for (j = 0; j < idx; ++j) {
-		    char* p_k = *(pp_keys + j);
-		    if (flag == 1) {
-		        //printf("tokens: %s p_keys : %s\n", tokens[i], p_k);
-		    }
-		    if (!strcmp(tokens[i], p_k)) { // if tokens equals existing alias keys
-			char* p_v = *(pp_vals + j);
-			char* p_v_tok;
-			length = strlen(p_v);
-			pos = i;
-			v_wordCnt[j] = 0;
-			//printf("%s\n", p_v); 
-			// xyz Hello world : v_wordCnt = 2;
-			p_v_tok = strtok(p_v, " ");
-			while(p_v_tok != NULL) {  
-			    ++v_wordCnt[j];
-			    p_v_tok = strtok(NULL, " ");
-			}
-			for (k = 0; k < (int)length; ++k) {
-			    *(p_v + k) = (*(p_v + k) == '\0') ? ' ' : *(p_v + k);
-			}	       
-
-			//printf("%s FOUND word Count !! : %d\n", p_v, v_wordCnt[j]);
-			p_v_tok = strtok(p_v, " ");
-			for (k = nr_tokens + v_wordCnt[j] - 2; k >= i + v_wordCnt[j]; --k) { // Space back sizeof WordCNT - 1
-			    tokens[k] = tokens[k - v_wordCnt[j] + 1];
-			}
-			free(tokens[i]);
-			tokens[nr_tokens + v_wordCnt[j] - 1] = NULL;
-			for (k = 0; p_v_tok != NULL; ++k) { // REPLACE with p_vals wordCnt Times, which is alias 
-			    char* tmp = malloc(sizeof(char) * (strlen(p_v_tok) + 1 )  );
-			    strncpy(tmp, p_v_tok, (strlen(p_v_tok ) + 1) ); // Deep COPY for tokens
-			    tokens[i + k] = tmp;
-			    //printf("TESTING REPLACED TOKENS : %s||||%s|||and length : %ld\n", tokens[i + k], p_v_tok, strlen(p_v_tok));
-			    //printf("COPYING TOKEN[j] : %s\n", p_v_tok);
-			    p_v_tok = strtok(NULL, " ");			    
-			}
-			for (k = 0; k < (int)length; ++k) { 
-			    *(p_v + k) = (*(p_v + k) == '\0') ? ' ' : *(p_v + k);
-			}
-		        nr_tokens += v_wordCnt[j] - 1;
-		        i += v_wordCnt[j] - 1;
-	                //printf("cur token[i] : %s wordCNT: %d\n", tokens[i + 1 - v_wordCnt[j]], v_wordCnt[j]);
-			
-			break;
-			//tokens[i] = malloc(sizeof(char) * (length + 1));
-			//strcpy(tokens[i], p_v);
-			//goto _FOUNDKEY;
-		    }
-	    	}
-	    }
-	    for (i = 0; i < nr_tokens; ++i){
-	       // printf("%s||result sizeof(tokens[i])%ld\n", tokens[i], strlen(tokens[i]));
-	    }
-	    //printf("cur nr_tokens : %d\n", nr_tokens);
-	    if (pid == CHILD_PROCESS && flag == 1)  {
 	    for (i = 0; i < nr_tokens; ++i) {
-	       // printf("After Aliased : %s\n", *(tokens + i));
-	    }
-	    }
-	
-	    goto _FOUNDKEY;
-_FOUNDKEY: /*
-	    if (pos == 0) { //Things to do for 'll' 'ls -al'
-		char* p_a = NULL;
-		char* p_b = NULL;
-		char* tmp = strtok(tokens[0], " ");
-		length = strlen(tmp);
-		p_a = malloc(sizeof(char) * (length + 1));
-		//printf("front : %s\n", tmp);
-
-		strcpy(p_a, tmp);
-		tmp[length] = ' ';
-
-		tmp += (length + 1);
-		//tmp = strpbrk(tokens[0], " ");
-		//printf("backward : %s\n", tmp);
-		length = strlen(tmp);
-		p_b = malloc(sizeof(char) * (length + 1));
-		strcpy(p_b, tmp);
-
-		free(tokens[0]);
-		tokens[0] = p_a;
-		for (i = nr_tokens; i >= 2; --i) {
-	            tokens[i] = tokens[i - 1];
+		int pos = find_alias_index(tokens[i]);
+		if (pos != -1) {
+	       	    // Space back sizeof WordCNT - 1
+		    space_back_wordCnt(tokens, nr_tokens, i, pos);
+		    free(tokens[i]);
+		    //tokens[nr_tokens + v_wordCnt[j] - 1] = NULL;
+                    replace_token_with_alias(&tokens, i, pos);			
+		    // REPLACE with p_vals wordCnt Times, which is alias 
+		    nr_tokens += v_wordCnt[pos] - 1;
+		    i += v_wordCnt[pos] - 1;	
 		}
-		tokens[1] = p_b;
-
-		//for (i = 0; i <= nr_tokens; ++i) {
-	  	//    printf("token (%d) : %s\n", i, tokens[i]);
-		//}
-	    }*/
-	    //printf("My PID : %d\n", getpid()); 
+	    }
+	    goto _FOUNDKEY;
+_FOUNDKEY: 
 	    if (-1 == execvp(tokens[0], tokens)) { //instructions that are NOT CD
 	        fprintf(stderr, "Unable to execute %s\n", tokens[0]);
 		exit(EXIT_FAILURE);
 	    }
 
-	    //if (pid2 == CHILD_PROCESS) close(fd2[1]);
-	    //else if (pid == CHILD_PROCESS) close(fd2[0]);
-	}
+	  }
 _SUCCESS:
 	return 1;
 _ERROR:
 	return 0;
 }
 
+void check_command_cd()
+{
+    return;
+}
+
+void check_command_alias()
+{
+    return;
+}
+
+int get_value_wordCnt(int idx)
+{
+    char* p_v = *(pp_vals + idx);
+    char* p_v_tok;
+    size_t j, length = strlen(p_v);
+    size_t ret = 0;
+    p_v_tok = strtok(p_v, " ");
+    while (p_v_tok != NULL) {
+        ++ret;
+	p_v_tok = strtok(NULL, " ");
+    }
+
+    for (j = 0; j < length; ++j) {
+        *(p_v + j) = (*(p_v + j) == '\0') ? ' ' : *(p_v + j);
+    }
+
+    return ret;
+}
+
+int find_alias_index(char* p_tok)
+{
+    int ret = -1;
+    size_t i = 0;    
+    while (i < idx) {
+        char* p_keys = *(pp_keys + i);
+	if (!strcmp(p_keys, p_tok)) {
+	    return ret = i;
+	}
+	++i;
+    }
+    return ret;
+}
+
+void space_back_wordCnt(char** pp_tok, int cur_nr_tokens, int tokIdx, int valIdx)
+{
+    int i;
+    int wordCnt = v_wordCnt[valIdx];
+
+    for (i = cur_nr_tokens + wordCnt - 2; i >= tokIdx + wordCnt; --i) { // Space back sizeof WordCNT - 1
+        pp_tok[i] = pp_tok[i - wordCnt + 1];
+    }
+    pp_tok[cur_nr_tokens + wordCnt - 1] = NULL;
+
+    return;
+}
+void replace_token_with_alias(char*** ppp_tok, int tokIdx, int valIdx)
+{
+    size_t j, length, length_tok;
+    //int wordCnt = v_wordCnt[valIdx];
+    char** pp_tok = *ppp_tok;
+    char* p_v = *(pp_vals + valIdx);
+    char* p_v_tok;
+    char* tmp;
+
+    length = strlen(p_v);
+    p_v_tok = strtok(p_v, " ");
+
+    for (j = 0; p_v_tok != NULL; ++j) {
+	length_tok = strlen(p_v_tok);
+	tmp = malloc(sizeof(char) * (length_tok + 1));
+	strncpy(tmp, p_v_tok, (length_tok + 1));
+
+	pp_tok[tokIdx + j] = tmp;
+	p_v_tok = strtok(NULL, " ");
+    }
+
+    for (j = 0; j < length; ++j) {
+        *(p_v + j) = (*(p_v + j) == '\0') ? ' ' : *(p_v + j); 
+    }
+
+    return;
+}
 
 /***********************************************************************
  * initialize()
