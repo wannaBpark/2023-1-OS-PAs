@@ -30,6 +30,7 @@
  */
 int run_command(int nr_tokens, char *tokens[])
 {
+	if (nr_tokens == 0) return 1;
 	if (strcmp(tokens[0], "exit") == 0) return 0;
 
 	fprintf(stderr, "Unable to execute %s\n", tokens[0]);
