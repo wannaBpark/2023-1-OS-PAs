@@ -75,6 +75,8 @@ int main(int argc, char * const argv[])
 
 		parse_command(command, &nr_tokens, tokens);
 
+		if (nr_tokens == 0) continue;
+
 		ret = run_command(nr_tokens, tokens);
 
 		free_command_tokens(tokens);
