@@ -161,6 +161,8 @@ Let's build my amazing shell with those system calls.
 
 - Aliases should be applied to the both commands before and after the pipe symbol.
 
+- **(Updated Apr 4)** You may assume that bulit-in commands are not used when using the pipe. In other words, only external commands will be used for using the pipe in this PA.
+
 - Hints
   - `pipe(2)` and `dup2(2)`.
   - Implement incrementally. First check whether the pipe symbol exists in the tokens. If not, just do execute the command. If exists, split the tokens into two pars and feed them to **two** different processes which are connected through a pipe.
