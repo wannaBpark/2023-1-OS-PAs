@@ -172,7 +172,7 @@ Let's build my amazing shell with those system calls.
 ### Restriction and hints
 - For your coding practice, the compiler is set to halt on some (important) warnings. Write your code to fully comply the C99 standard.
 - You can define/change edit whatever you want in `pa1.c`. Also you may leave `initialize()` and `finalizne()` blank if you don't need them.
-- You may not use some or all of the hinted system calls.
+- You might not use some or all of the hinted system calls if you don't want to use them.
 - DO NOT USE `system()` system call. You will get 0 pts if you use it.
 - DO NOT implement external programs' features by yourself (e.g., printing out a message to handle `echo` command, listing the current directory to handle `ls` command, etc). You will not get any point in this case.
 - It is advised to test your code on your computer first and to implement incrementally. Some sample inputs are included under `testcase` directory. Try to input each line or just run `./mash < [input file]`.
