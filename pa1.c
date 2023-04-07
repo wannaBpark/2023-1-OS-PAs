@@ -15,10 +15,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
+
 /***********************************************************************
  * run_command()
  *
@@ -265,8 +262,7 @@ void replace_token_with_alias(char*** ppp_tok, int tokIdx, int valIdx)
  */
 int initialize(int argc, char * const argv[])
 {
-		int a = 0;
-		return a;
+	return 0;
 }
 
 
