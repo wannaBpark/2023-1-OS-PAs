@@ -274,7 +274,7 @@ static void __show_pagetable(void)
 			if (!verbose && !pte->valid) continue;
 			fprintf(stderr, "%02d:%02d | %c %c%c | %-3d\n", i, j,
 				pte->valid ? 'v' : ' ',
-				pte->rw & ACCESS_READ ? 'r' : ' ',
+				pte->valid ? (pte->rw & ACCESS_READ ? 'r' : ' ') : ' ',
 				pte->rw & ACCESS_WRITE ? 'w' : ' ',
 				pte->pfn);
 		}
@@ -289,7 +289,10 @@ static void __show_tlb(void)
 
 		if (!t->valid) continue;
 
-		fprintf(stderr, "%3d -> %-3d\n", t->vpn, t->pfn);
+		fprintf(stderr, "%c%c | %3d -> %-3d\n",
+				t->rw & ACCESS_READ ? 'r' : ' ',
+				t->rw & ACCESS_WRITE ? 'w' : ' ',
+				t->vpn, t->pfn);
 	}
 }
 
@@ -388,6 +391,7 @@ static void __print_usage(const char * name)
 {
 	printf("Usage: %s {-q} {-f [workload file]}\n", name);
 	printf("\n");
+	printf("  -t: Show TLB result\n");
 	printf("  -q: Run quietly\n\n");
 }
 
