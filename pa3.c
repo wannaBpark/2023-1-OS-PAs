@@ -82,6 +82,7 @@ bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int *pfn)
  */
 void insert_tlb(unsigned int vpn, unsigned int rw, unsigned int pfn)
 {
+	int i;
 }
 
 
