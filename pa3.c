@@ -193,6 +193,7 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
 	struct pte* p_pte = &(current->pagetable.outer_ptes[pd_idx]->ptes[pte_idx]);
 
+	//printf("Entered handler page fault\n");
 	if (rw == ACCESS_WRITE && p_pte->private == false) {
 		int pfnum = p_pte->pfn;
 		int* p_mapcnt = &mapcounts[pfnum];
@@ -203,6 +204,7 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
 		} else if (*p_mapcnt >= 2) {
 			--*p_mapcnt; // reduce ref count
 
+			//printf("write new memory !!\n");
 			return alloc_page(vpn, rw);
 		}
 	}
@@ -270,6 +272,7 @@ void switch_process(unsigned int pid)
 			if (!p_pte->valid) continue;
 
 			++mapcounts[p_pte->pfn];
+			p_pte->rw = ACCESS_READ;
 			p_pte->private = false; // this isn't longer private (owned for one)
 			
 			memcpy(&p_nxtpd->ptes[j], p_pte, sizeof(struct pte));
