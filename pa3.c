@@ -201,11 +201,13 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
 		if (*p_mapcnt == 1) {
 			p_pte->rw = ACCESS_WRITE;
 			p_pte->private = true; // Now it's only owned by one (mapcnt == 1)
+			ret = true;		
 		} else if (*p_mapcnt >= 2) {
 			--*p_mapcnt; // reduce ref count
-
-			//printf("write new memory !!\n");
-			return alloc_page(vpn, rw);
+			//printf("write new memory vpn : %d rw: %d\n", vpn, rw);
+			ret = alloc_page(vpn, rw);
+			//printf("inserted vpn : %d access : %d pfnum : %d\n", vpn, p_pte->rw, p_pte->pfn);
+		        ret = true;	
 		}
 	}
 	return ret;
