@@ -107,7 +107,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 {
 	struct pte_directory* p_pd;
 	struct pte* p_pte;
-	struct pte _pte = { true, rw, 0, true };
+	struct pte _pte = { true, rw, 0, rw };
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
 	size_t i, pfnum;
@@ -188,19 +188,21 @@ void free_page(unsigned int vpn)
  */
 bool handle_page_fault(unsigned int vpn, unsigned int rw)
 {
-	bool ret = false;
+	size_t ret = false;
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
 	struct pte* p_pte = &(current->pagetable.outer_ptes[pd_idx]->ptes[pte_idx]);
 
 	//printf("Entered handler page fault\n");
-	if (rw == ACCESS_WRITE && p_pte->private == false) {
+	//printf("ACCESS : %d Private : %d\n", p_pte->rw, p_pte->private);
+	if (rw == ACCESS_WRITE && p_pte->private != ACCESS_READ) {
 		int pfnum = p_pte->pfn;
 		int* p_mapcnt = &mapcounts[pfnum];
 		
-		if (*p_mapcnt == 1 && p_pte->private == false) {
+
+		if (*p_mapcnt == 1) {
 			p_pte->rw = 0x03;
-			p_pte->private = true; // Now it's only owned by one (mapcnt == 1)
+			p_pte->private = ACCESS_WRITE; // Now it's only owned by one (mapcnt == 1)
 			return ret = true;		
 		} else if (*p_mapcnt >= 2) {
 			--*p_mapcnt; // reduce ref count
@@ -208,10 +210,10 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
 			ret = alloc_page(vpn, rw);
 			//printf("inserted vpn : %d access : %d pfnum : %d\n", vpn, p_pte->rw, p_pte->pfn);
 		        p_pte->rw = 0x03;
-			return ret = true;	
+			return ret == -1 ? false : true;	
 		}
 	}
-	return ret;
+	return false;
 }
 
 
@@ -276,9 +278,10 @@ void switch_process(unsigned int pid)
 
 			++mapcounts[p_pte->pfn];
 			//p_pte->valid = false;
+			if (p_pte->rw == ACCESS_WRITE) {
+				p_pte->private = p_pte->rw; // save the original RW value
+			}
 			p_pte->rw = ACCESS_READ;
-			p_pte->private = false; // this isn't :longer private (owned for one)
-			
 			memcpy(&p_nxtpd->ptes[j], p_pte, sizeof(struct pte));
 			//p_nxtpd->ptes[j].rw = ACCESS_READ;
 			//p_nxtpd->ptes[j].private = false;
