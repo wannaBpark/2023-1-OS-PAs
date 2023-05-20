@@ -131,6 +131,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 	p_pd = current->pagetable.outer_ptes[pd_idx];
 	if (p_pd == NULL) {
 		p_pd = malloc(sizeof(struct pte) * NR_PTES_PER_PAGE);
+		current->pagetable.outer_ptes[pd_idx] = p_pd;
 	}
 	p_pte = &p_pd->ptes[pte_idx];
 	*p_pte = _pte;
