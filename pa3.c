@@ -20,20 +20,20 @@
 #include "list_head.h"
 #include "vm.h"
 
-/**
- * Ready queue of the system
- */
+ /**
+  * Ready queue of the system
+  */
 extern struct list_head processes;
 
 /**
  * Currently running process
  */
-extern struct process *current;
+extern struct process* current;
 
 /**
  * Page Table Base Register that MMU will walk through for address translation
  */
-extern struct pagetable *ptbr;
+extern struct pagetable* ptbr;
 
 /**
  * TLB of the system.
@@ -63,7 +63,7 @@ extern unsigned int mapcounts[];
  *   Return true if the translation is cached in the TLB.
  *   Return false otherwise
  */
-bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int *pfn)
+bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int* pfn)
 {
 	return false;
 }
@@ -106,7 +106,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 {
 	struct pte_directory* p_pd;
 	struct pte* p_pte;
-	struct pte _pte = {true, rw, 0, 100};
+	struct pte _pte = { true, rw, 0, true };
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
 	size_t i, pfnum;
@@ -130,8 +130,12 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 
 	p_pd = current->pagetable.outer_ptes[pd_idx];
 	if (p_pd == NULL) {
-		p_pd = malloc(sizeof(struct pte) * NR_PTES_PER_PAGE);
-		current->pagetable.outer_ptes[pd_idx] = p_pd;
+		<<<<<< < HEAD
+			p_pd = (struct pte_directory*)malloc(sizeof(struct pte) * NR_PTES_PER_PAGE);
+		====== =
+			p_pd = malloc(sizeof(struct pte) * NR_PTES_PER_PAGE);
+		>>>>>> > 46a1ae4240833352c83557c4fcef395cc2119c63
+			current->pagetable.outer_ptes[pd_idx] = p_pd;
 	}
 	p_pte = &p_pd->ptes[pte_idx];
 	*p_pte = _pte;
@@ -153,15 +157,15 @@ void free_page(unsigned int vpn)
 {
 	struct pte_directory* p_pd;
 	struct pte* p_pte;
-	struct pte _pte = {false, false,false,false};
+	struct pte _pte = { false, false,false,false };
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
 	size_t i, pfnum;
 
 	p_pd = current->pagetable.outer_ptes[pd_idx];
 	p_pte = &p_pd->ptes[pte_idx];
-	
-	
+
+
 	pfnum = p_pte->pfn;
 	--mapcounts[pfnum];
 
@@ -204,11 +208,59 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
  *   If there is no process with @pid in the @processes list, fork a process
  *   from the @current. This implies the forked child process should have
  *   the identical page table entry 'values' to its parent's (i.e., @current)
- *   page table. 
+ *   page table.
  *   To implement the copy-on-write feature, you should manipulate the writable
- *   bit in PTE and mapcounts for shared pages. You may use pte->private for 
+ *   bit in PTE and mapcounts for shared pages. You may use pte->private for
  *   storing some useful information :-)
  */
 void switch_process(unsigned int pid)
 {
+	struct process* pos = NULL;
+	struct process* nxt = NULL;
+	if (!list_empty(&processes)) {
+		list_for_each_entry_safe(nxt, pos, &processes, list) {
+			if (nxt->pid == pid) {
+				break;
+			}
+		}
+	}
+
+	if (nxt != NULL) {
+		goto CHANGECUR;
+	}
+
+	// If there is no proccess with @pid
+
+	nxt = (struct process*)malloc(sizeof(struct process));
+	nxt->pid = pid;
+	//memcpy(&nxt->pagetable, &current->pagetable, sizeof(struct pagetable));
+	//nxt->list = LIST_HEAD_INIT(nxt->list);	
+
+	for (int i = 0; i < NR_PTES_PER_PAGE; ++i) {
+		struct pte_directory* p_pd = current->pagetable.outer_ptes[i];
+		struct pte_directory* p_nxtpd;
+
+		// Unavailable pd -> no need to memcpy
+		if (!p_pd) continue;
+
+		for (int j = 0; j < NR_PTES_PER_PAGE; ++j) {
+			struct pte* p_pte = &p_pd->ptes[j];
+
+			if (!p_pte->valid) continue;
+
+			++mapcounts[p_pte->pfn];
+			p_pte->private = false;
+		}
+		p_nxtpd = (struct pte_directory*)malloc(sizeof(struct pte) * NR_PTES_PER_PAGE);
+		memcpy(p_nxtpd, p_pd, sizeof(struct pte) * NR_PTES_PER_PAGE);
+		nxt->pagetable.outer_ptes[i] = p_nxtpd;
+	}
+CHANGECUR:
+
+	list_del_init(&nxt->list);
+	list_add_tail(&current->list, &processes);
+	ptbr = &nxt->pagetable;
+	current = nxt;
+
+	return;
 }
