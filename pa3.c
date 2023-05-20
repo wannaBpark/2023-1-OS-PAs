@@ -106,13 +106,14 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 {
 	struct pte_directory* p_pd;
 	struct pte* p_pte;
-	struct pte _pte;
+	struct pte _pte = {true, rw, 0, 100};
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
 	size_t i, pfnum;
+	bool isFree = false;
 
 	for (i = 0; i < NR_PAGEFRAMES; ++i) {
-		bool isFree = (mapcounts[i] == 0) ? true : false;
+		isFree = (mapcounts[i] == 0) ? true : false;
 		if (isFree)
 			break;
 	}
@@ -123,17 +124,16 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 		return -1;
 
 	pfnum = i;
+	_pte.pfn = pfnum;
 
 	++mapcounts[pfnum];
-	_pte = { true, rw, pfnum, 100 };
-	
+
 	p_pd = current->pagetable.outer_ptes[pd_idx];
-	if (!pd) {
+	if (p_pd == NULL) {
 		p_pd = malloc(sizeof(struct pte) * NR_PTES_PER_PAGE);
 	}
-	p_pte = p_pd->ptes[pte_idx];
+	p_pte = &p_pd->ptes[pte_idx];
 	*p_pte = _pte;
-
 
 	return pfnum;
 }
@@ -152,18 +152,19 @@ void free_page(unsigned int vpn)
 {
 	struct pte_directory* p_pd;
 	struct pte* p_pte;
+	struct pte _pte = {false, false,false,false};
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
 	size_t i, pfnum;
 
-
 	p_pd = current->pagetable.outer_ptes[pd_idx];
-	p_pte = pd->ptes[pte_idx];
+	p_pte = &p_pd->ptes[pte_idx];
+	
 	
 	pfnum = p_pte->pfn;
 	--mapcounts[pfnum];
 
-	*p_pte = {false, false, false, false};
+	*p_pte = _pte;
 }
 
 
