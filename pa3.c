@@ -222,14 +222,14 @@ void switch_process(unsigned int pid)
 		}
 	}
 
-	if (nxt != NULL) {
+	if (nxt != NULL && nxt->pid == pid) {
 		goto CHANGECUR;
 	}
 
 	// If there is no proccess with @pid
 
 	nxt = (struct process*)malloc(sizeof(struct process));
-	nxt->pid = pid;
+	
 	//memcpy(&nxt->pagetable, &current->pagetable, sizeof(struct pagetable));
 	INIT_LIST_HEAD(&nxt->list);	
 
@@ -240,16 +240,21 @@ void switch_process(unsigned int pid)
 		// Unavailable pd -> no need to memcpy
 		if (!p_pd) continue;
 
+		p_nxtpd = (struct pte_directory*)malloc(sizeof(struct pte) * NR_PTES_PER_PAGE);
+		
 		for (int j = 0; j < NR_PTES_PER_PAGE; ++j) {
 			struct pte* p_pte = &p_pd->ptes[j];
+			//struct pte* p_npte = &p_nxtpd->ptes[j];
 
 			if (!p_pte->valid) continue;
 
 			++mapcounts[p_pte->pfn];
 			p_pte->private = false;
+			//p_nxtpd->ptes[j] = *p_pte;
+			memcpy(&p_nxtpd->ptes[j], p_pte, sizeof(struct pte));
+			//printf("pfn complete : %d %d\n", p_pte->pfn, p_nxtpd->ptes[j].pfn);
 		}
-		p_nxtpd = (struct pte_directory*)malloc(sizeof(struct pte) * NR_PTES_PER_PAGE);
-		memcpy(p_nxtpd, p_pd, sizeof(struct pte) * NR_PTES_PER_PAGE);
+		//memcpy(p_nxtpd, p_pd, sizeof(struct pte) * NR_PTES_PER_PAGE);
 		nxt->pagetable.outer_ptes[i] = p_nxtpd;
 	}
 CHANGECUR:
@@ -257,6 +262,7 @@ CHANGECUR:
 	list_del_init(&nxt->list);
 	list_add_tail(&current->list, &processes);
 	ptbr = &nxt->pagetable;
+	nxt->pid = pid;
 	current = nxt;
 
 	return;
