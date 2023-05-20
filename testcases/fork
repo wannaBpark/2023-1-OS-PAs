@@ -11,11 +11,11 @@ alloc 7 r
 alloc 6 rw
 alloc 5 rw
 show
-pages
+frames
 
 switch 1
 show
-pages
+frames
 
 read 0
 read 1
@@ -26,7 +26,7 @@ read 6
 
 switch 0
 show
-pages
+frames
 read 1
 read 3
 read 5

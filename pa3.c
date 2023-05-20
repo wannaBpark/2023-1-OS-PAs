@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "types.h"
 #include "list_head.h"
@@ -230,7 +231,7 @@ void switch_process(unsigned int pid)
 	nxt = (struct process*)malloc(sizeof(struct process));
 	nxt->pid = pid;
 	//memcpy(&nxt->pagetable, &current->pagetable, sizeof(struct pagetable));
-	//nxt->list = LIST_HEAD_INIT(nxt->list);	
+	INIT_LIST_HEAD(&nxt->list);	
 
 	for (int i = 0; i < NR_PTES_PER_PAGE; ++i) {
 		struct pte_directory* p_pd = current->pagetable.outer_ptes[i];

@@ -12,7 +12,7 @@ alloc 6 rw
 alloc 5 rw
 switch 1
 show
-pages
+frames
 
 read 16
 read 17
@@ -25,4 +25,4 @@ switch 0
 show
 write 19
 write 18
-pages
+frames
