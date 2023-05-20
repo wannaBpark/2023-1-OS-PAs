@@ -107,7 +107,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 {
 	struct pte_directory* p_pd;
 	struct pte* p_pte;
-	struct pte _pte = { true, rw, 0, true };
+	struct pte _pte = { true, rw, 0, false };
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
 	size_t i, pfnum;
@@ -249,9 +249,11 @@ void switch_process(unsigned int pid)
 			if (!p_pte->valid) continue;
 
 			++mapcounts[p_pte->pfn];
-			p_pte->private = false;
-			//p_nxtpd->ptes[j] = *p_pte;
+			p_pte->private = true;
+			
 			memcpy(&p_nxtpd->ptes[j], p_pte, sizeof(struct pte));
+			p_nxtpd->ptes[j].rw = ACCESS_READ;
+			p_nxtpd->ptes[j].private = false;
 			//printf("pfn complete : %d %d\n", p_pte->pfn, p_nxtpd->ptes[j].pfn);
 		}
 		//memcpy(p_nxtpd, p_pd, sizeof(struct pte) * NR_PTES_PER_PAGE);
