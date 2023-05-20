@@ -107,7 +107,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 {
 	struct pte_directory* p_pd;
 	struct pte* p_pte;
-	struct pte _pte = { true, rw, 0, false };
+	struct pte _pte = { true, rw, 0, true };
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
 	size_t i, pfnum;
@@ -188,7 +188,25 @@ void free_page(unsigned int vpn)
  */
 bool handle_page_fault(unsigned int vpn, unsigned int rw)
 {
-	return false;
+	bool ret = false;
+	int pd_idx = vpn / NR_PTES_PER_PAGE;
+	int pte_idx = vpn % NR_PTES_PER_PAGE;
+	struct pte* p_pte = &(current->pagetable.outer_ptes[pd_idx]->ptes[pte_idx]);
+
+	if (rw == ACCESS_WRITE && p_pte->private == false) {
+		int pfnum = p_pte->pfn;
+		int* p_mapcnt = &mapcounts[pfnum];
+
+		if (*p_mapcnt == 1) {
+			p_pte->rw = ACCESS_WRITE;
+			p_pte->private = true; // Now it's only owned by one (mapcnt == 1)
+		} else if (*p_mapcnt >= 2) {
+			--*p_mapcnt; // reduce ref count
+
+			return alloc_page(vpn, rw);
+		}
+	}
+	return ret;
 }
 
 
@@ -206,7 +224,10 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
  *   from the @current. This implies the forked child process should have
  *   the identical page table entry 'values' to its parent's (i.e., @current)
  *   page table.
- *   To implement the copy-on-write feature, you should manipulate the writable
+ *   To implement the copy-on-write feature, you should manipulate the 
+ * 
+ * 
+ * 
  *   bit in PTE and mapcounts for shared pages. You may use pte->private for
  *   storing some useful information :-)
  */
@@ -249,11 +270,11 @@ void switch_process(unsigned int pid)
 			if (!p_pte->valid) continue;
 
 			++mapcounts[p_pte->pfn];
-			p_pte->private = true;
+			p_pte->private = false; // this isn't longer private (owned for one)
 			
 			memcpy(&p_nxtpd->ptes[j], p_pte, sizeof(struct pte));
-			p_nxtpd->ptes[j].rw = ACCESS_READ;
-			p_nxtpd->ptes[j].private = false;
+			//p_nxtpd->ptes[j].rw = ACCESS_READ;
+			//p_nxtpd->ptes[j].private = false;
 			//printf("pfn complete : %d %d\n", p_pte->pfn, p_nxtpd->ptes[j].pfn);
 		}
 		//memcpy(p_nxtpd, p_pd, sizeof(struct pte) * NR_PTES_PER_PAGE);
