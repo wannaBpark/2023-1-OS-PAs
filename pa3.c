@@ -136,7 +136,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 	}
 	p_pte = &p_pd->ptes[pte_idx];
 	*p_pte = _pte;
-
+	//p_pte->rw = rw;
 	return pfnum;
 }
 
@@ -197,17 +197,18 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
 	if (rw == ACCESS_WRITE && p_pte->private == false) {
 		int pfnum = p_pte->pfn;
 		int* p_mapcnt = &mapcounts[pfnum];
-
-		if (*p_mapcnt == 1) {
-			p_pte->rw = ACCESS_WRITE;
+		
+		if (*p_mapcnt == 1 && p_pte->private == false) {
+			p_pte->rw = 0x03;
 			p_pte->private = true; // Now it's only owned by one (mapcnt == 1)
-			ret = true;		
+			return ret = true;		
 		} else if (*p_mapcnt >= 2) {
 			--*p_mapcnt; // reduce ref count
 			//printf("write new memory vpn : %d rw: %d\n", vpn, rw);
 			ret = alloc_page(vpn, rw);
 			//printf("inserted vpn : %d access : %d pfnum : %d\n", vpn, p_pte->rw, p_pte->pfn);
-		        ret = true;	
+		        p_pte->rw = 0x03;
+			return ret = true;	
 		}
 	}
 	return ret;
@@ -274,8 +275,9 @@ void switch_process(unsigned int pid)
 			if (!p_pte->valid) continue;
 
 			++mapcounts[p_pte->pfn];
+			//p_pte->valid = false;
 			p_pte->rw = ACCESS_READ;
-			p_pte->private = false; // this isn't longer private (owned for one)
+			p_pte->private = false; // this isn't :longer private (owned for one)
 			
 			memcpy(&p_nxtpd->ptes[j], p_pte, sizeof(struct pte));
 			//p_nxtpd->ptes[j].rw = ACCESS_READ;
