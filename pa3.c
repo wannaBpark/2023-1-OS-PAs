@@ -264,6 +264,7 @@ void switch_process(unsigned int pid)
 {
 	struct process* pos = NULL;
 	struct process* nxt = NULL;
+	struct tlb_entry* p_tlb = &tlb[0];
 	if (!list_empty(&processes)) {
 		list_for_each_entry_safe(nxt, pos, &processes, list) {
 			if (nxt->pid == pid) {
@@ -319,6 +320,10 @@ CHANGECUR:
 	ptbr = &nxt->pagetable;
 	nxt->pid = pid;
 	current = nxt;
+
+	while (p_tlb->valid) {
+		p_tlb++->valid = false;
+	}
 
 	return;
 }
