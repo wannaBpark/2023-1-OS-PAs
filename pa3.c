@@ -94,6 +94,7 @@ bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int* p_pfn)
 void insert_tlb(unsigned int vpn, unsigned int rw, unsigned int pfn)
 {
 	struct tlb_entry* p_tlb = &tlb[0];
+	struct tlb_entry _tlb = { true, rw, vpn, pfn };
 
 	while (p_tlb->valid) {
 		if (p_tlb->vpn == vpn && p_tlb->rw == rw) {
@@ -103,8 +104,8 @@ void insert_tlb(unsigned int vpn, unsigned int rw, unsigned int pfn)
 		++p_tlb;
 	}
 
-	*p_tlb = { true, rw, vpn, pfn };
-	*++p_tlb = { false, 0, 0 };
+	*p_tlb = _tlb;
+	*++p_tlb->valid = false;
 }
 
 
