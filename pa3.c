@@ -69,7 +69,9 @@ bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int* p_pfn)
 	struct tlb_entry* p_tlb = &tlb[0];
 
 	while (p_tlb->valid) {
-		if (p_tlb->vpn == vpn && p_tlb->rw == rw) {
+		//printf("Searching for VPN : %d, RW: %d\n and p_tlb->vpn : %d and rw : %d",
+		//	       vpn,rw,p_tlb->vpn, p_tlb->rw);	
+		if (p_tlb->vpn == vpn && p_tlb->rw >= rw) {
 			*p_pfn = p_tlb->pfn;
 			return true;
 		}
@@ -106,6 +108,8 @@ void insert_tlb(unsigned int vpn, unsigned int rw, unsigned int pfn)
 
 	*p_tlb = _tlb;
 	(++p_tlb)->valid = false;
+
+	printf("current size : %d\n", p_tlb - &tlb[0]);
 }
 
 
