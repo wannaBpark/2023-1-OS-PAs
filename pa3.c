@@ -64,8 +64,18 @@ extern unsigned int mapcounts[];
  *   Return true if the translation is cached in the TLB.
  *   Return false otherwise
  */
-bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int* pfn)
+bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int* p_pfn)
 {
+	struct tlb_entry* p_tlb = &tlb[0];
+
+	while (p_tlb->vaid) {
+		if (p_tlb->vpn == vpn && p_tlb->rw == rw) {
+			*p_pfn = p_tlb->pfn;
+			return true;
+		}
+		++p_tlb;
+	}
+
 	return false;
 }
 
@@ -83,7 +93,18 @@ bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int* pfn)
  */
 void insert_tlb(unsigned int vpn, unsigned int rw, unsigned int pfn)
 {
-	int i;
+	struct tlb_entry* p_tlb = &tlb[0];
+
+	while (p_tlb->valid) {
+		if (p_tlb->vpn == vpn && p_tlb->rw == rw) {
+			p_tlb->pfn = pfn;
+			return;
+		}
+		++p_tlb;
+	}
+
+	*p_tlb = { true, rw, vpn, pfn };
+	*++p_tlb = { false, 0, 0 };
 }
 
 
