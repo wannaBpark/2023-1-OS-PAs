@@ -162,7 +162,6 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 	}
 	p_pte = &p_pd->ptes[pte_idx];
 	*p_pte = _pte;
-	//p_pte->rw = rw;
 	return pfnum;
 }
 
@@ -186,7 +185,7 @@ void free_page(unsigned int vpn)
 	int tlbIdx = -1;
 	size_t i, pfnum;
 
-	p_pte = current->pagetable.outer_ptes[pd_idx]->ptes[pte_idx];
+	p_pte = &current->pagetable.outer_ptes[pd_idx]->ptes[pte_idx];
 	pfnum = p_pte->pfn;
 	--mapcounts[pfnum];
 	*p_pte = _pte;
@@ -205,6 +204,9 @@ void free_page(unsigned int vpn)
 		*(p_tlb - 1) = *p_tlb;
 		++p_tlb;
 	}
+
+	// delete the last one that is shifted to the previous one
+	// also works if tlbIdx == tlb.size
 	(--p_tlb)->valid = false;
 }
 
@@ -230,10 +232,7 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
 	size_t ret = false;
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
-	struct pte* p_pte = &(current->pagetable.outer_ptes[pd_idx]->ptes[pte_idx]);
-
-	//printf("Entered handler page fault\n");
-	//printf("ACCESS : %d Private : %d\n", p_pte->rw, p_pte->private);
+	struct pte* p_pte = &(current->pagetable.outer_ptes[pd_idx]->ptes[p
 	if (rw == ACCESS_WRITE && p_pte->private != ACCESS_READ) {
 		int pfnum = p_pte->pfn;
 		int* p_mapcnt = &mapcounts[pfnum];
@@ -245,10 +244,8 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
 			return ret = true;		
 		} else if (*p_mapcnt >= 2) {
 			--*p_mapcnt; // reduce ref count
-			//printf("write new memory vpn : %d rw: %d\n", vpn, rw);
 			ret = alloc_page(vpn, rw);
-			//printf("inserted vpn : %d access : %d pfnum : %d\n", vpn, p_pte->rw, p_pte->pfn);
-		        p_pte->rw = 0x03;
+			p_pte->rw = 0x03;
 			return ret == -1 ? false : true;	
 		}
 	}
@@ -325,7 +322,6 @@ void switch_process(unsigned int pid)
 			memcpy(&p_nxtpd->ptes[j], p_pte, sizeof(struct pte));
 			//p_nxtpd->ptes[j].rw = ACCESS_READ;
 			//p_nxtpd->ptes[j].private = false;
-			//printf("pfn complete : %d %d\n", p_pte->pfn, p_nxtpd->ptes[j].pfn);
 		}
 		//memcpy(p_nxtpd, p_pd, sizeof(struct pte) * NR_PTES_PER_PAGE);
 		nxt->pagetable.outer_ptes[i] = p_nxtpd;
@@ -338,6 +334,7 @@ CHANGECUR:
 	nxt->pid = pid;
 	current = nxt;
 
+	// FLUSH all the TLB ENTRIES
 	while (p_tlb->valid) {
 		p_tlb++->valid = false;
 	}
