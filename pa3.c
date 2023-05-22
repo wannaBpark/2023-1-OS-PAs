@@ -178,21 +178,34 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
  */
 void free_page(unsigned int vpn)
 {
-	struct pte_directory* p_pd;
+	struct tlb_entry* p_tlb = &tlb[0];
 	struct pte* p_pte;
 	struct pte _pte = { false, false,false,false };
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
+	int tlbIdx = -1;
 	size_t i, pfnum;
 
-	p_pd = current->pagetable.outer_ptes[pd_idx];
-	p_pte = &p_pd->ptes[pte_idx];
-
-
+	p_pte = current->pagetable.outer_ptes[pd_idx]->ptes[pte_idx];
 	pfnum = p_pte->pfn;
 	--mapcounts[pfnum];
-
 	*p_pte = _pte;
+
+	while (p_tlb->valid) {
+		if (p_tlb->vpn == vpn) {
+			tlbIdx = p_tlb - &tlb[0];
+			break;
+		}
+	}
+	if (tlbIdx == -1) return;
+
+	p_tlb->valid = false;
+	p_tlb = &tlb[tlbIdx + 1];
+	while (p_tlb->valid) {
+		*(p_tlb - 1) = *p_tlb;
+		++p_tlb;
+	}
+	(--p_tlb)->valid = false;
 }
 
 
