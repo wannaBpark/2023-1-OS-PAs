@@ -232,7 +232,7 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
 	size_t ret = false;
 	int pd_idx = vpn / NR_PTES_PER_PAGE;
 	int pte_idx = vpn % NR_PTES_PER_PAGE;
-	struct pte* p_pte = &(current->pagetable.outer_ptes[pd_idx]->ptes[p
+	struct pte* p_pte = &(current->pagetable.outer_ptes[pd_idx]->ptes[pte_idx]);
 	if (rw == ACCESS_WRITE && p_pte->private != ACCESS_READ) {
 		int pfnum = p_pte->pfn;
 		int* p_mapcnt = &mapcounts[pfnum];
