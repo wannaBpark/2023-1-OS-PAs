@@ -18,7 +18,7 @@ write 2
 write 3
 
 show
-pages
+frames
 
 free 0
 free 1
@@ -26,11 +26,11 @@ free 2
 free 8
 
 show
-pages
+frames
 
 alloc 0 rw
 alloc 1 rw
 alloc 2 rw
 
 show
-pages
+frames

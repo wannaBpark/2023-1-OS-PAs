@@ -8,7 +8,7 @@ alloc 17 rw
 alloc 32 rw
 alloc 48 r
 show
-pages
+frames
 
 read 0
 read 1
