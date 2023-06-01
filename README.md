@@ -43,7 +43,7 @@ Implement a mini virtual memory system simulator.
 
 - During the address translation, the framework looks up TLB by calling `lookup_tlb()` first. If the translation exists in the TLB, the framework will use the cached mapping without going through the page table. Otherwise, the framework will translate the mapping by walking down the page table. The translation result will be asked to be inserted into the TLB by calling `insert_tlb()`.
 
-- TLB should maintain entries in the FIFO manner; the earlier an entry is inserted, the earlier the entry should be printed with the `tlb` command.
+- TLB should maintain entries in the FIFO manner; the earlier an entry is inserted, the earlier the entry should be printed with the `tlb` command. However, if a TLB entry should be removed for some reasons, reuse the TLB entry for storing the next TLB entry insertion.
 
 - TLB is a cache of the page table. This implies, when something is changed in the page table, corresponding TLB should be also updated. This implies, if TLB has an entry for a VPN with read-only permission, the TLB lookup for the VPN for a **write access** should be failed. If you need to change the rw permission of an TLB entry, you should update the existing TLB entry rather than inserting a new one and removing the old one.
 
