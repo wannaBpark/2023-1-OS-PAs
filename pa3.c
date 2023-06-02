@@ -69,8 +69,6 @@ bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int* p_pfn)
 	struct tlb_entry* p_tlb = &tlb[0];
 
 	while (p_tlb->valid) {
-		//printf("Searching for VPN : %d, RW: %d\n and p_tlb->vpn : %d and rw : %d",
-		//	       vpn,rw,p_tlb->vpn, p_tlb->rw);	
 		if (p_tlb->vpn == vpn && p_tlb->rw >= rw) {
 			*p_pfn = p_tlb->pfn;
 			return true;
@@ -309,21 +307,16 @@ void switch_process(unsigned int pid)
 		
 		for (int j = 0; j < NR_PTES_PER_PAGE; ++j) {
 			struct pte* p_pte = &p_pd->ptes[j];
-			//struct pte* p_npte = &p_nxtpd->ptes[j];
 
 			if (!p_pte->valid) continue;
 
 			++mapcounts[p_pte->pfn];
-			//p_pte->valid = false;
 			if (p_pte->rw == ACCESS_WRITE) {
 				p_pte->private = p_pte->rw; // save the original RW value
 			}
 			p_pte->rw = ACCESS_READ;
 			memcpy(&p_nxtpd->ptes[j], p_pte, sizeof(struct pte));
-			//p_nxtpd->ptes[j].rw = ACCESS_READ;
-			//p_nxtpd->ptes[j].private = false;
 		}
-		//memcpy(p_nxtpd, p_pd, sizeof(struct pte) * NR_PTES_PER_PAGE);
 		nxt->pagetable.outer_ptes[i] = p_nxtpd;
 	}
 CHANGECUR:
